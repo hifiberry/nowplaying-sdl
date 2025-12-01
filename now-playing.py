@@ -207,7 +207,10 @@ def render_wrapped_text_centered(renderer, font, text, center_x, y, max_width, r
 
 
 def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False):
-    """Draw the Now Playing UI in landscape orientation"""
+    """Draw the Now Playing UI in landscape orientation
+    
+    Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
+    """
     # Clear screen to light gray background
     sdl2.SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255)
     sdl2.SDL_RenderClear(renderer)
@@ -217,6 +220,8 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     cover_size = min(width // 2 - padding * 2, height - padding * 2)
     cover_x = padding
     cover_y = (height - cover_size) // 2
+    
+    button_rects = {}
     
     # Draw album cover placeholder (dark gray square)
     draw_rounded_rect(renderer, cover_x, cover_y, cover_size, cover_size, 20, 100, 100, 100, 255)
@@ -265,6 +270,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         like_x = content_x + (content_width - button_size) // 2
         draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 40, *like_color, 255)
         render_text_centered(renderer, font_icons, "favorite", like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        button_rects['like'] = (like_x, button_y, button_size, button_size)
     else:
         # Calculate button positions to center them
         total_buttons_width = button_size * 4 + button_spacing * 3
@@ -274,28 +280,46 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         prev_x = buttons_start_x
         draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, 40, *prev_color, 255)
         render_text_centered(renderer, font_icons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        button_rects['prev'] = (prev_x, button_y, button_size, button_size)
         
         # Play/Pause button (play_arrow icon)
         play_x = prev_x + button_size + button_spacing
         draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, 40, *play_color, 255)
         render_text_centered(renderer, font_icons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        button_rects['play'] = (play_x, button_y, button_size, button_size)
         
         # Next button (skip_next icon)
         next_x = play_x + button_size + button_spacing
         draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, 40, *next_color, 255)
         render_text_centered(renderer, font_icons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        button_rects['next'] = (next_x, button_y, button_size, button_size)
         
         # Like button (favorite icon)
         like_x = next_x + button_size + button_spacing
         draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 40, *like_color, 255)
         render_text_centered(renderer, font_icons, "favorite", like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        button_rects['like'] = (like_x, button_y, button_size, button_size)
+    
+    return button_rects
 
 
 def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False):
-    """Draw the Now Playing UI in portrait orientation"""
+    """Draw the Now Playing UI in portrait orientation
+    
+    Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
+    """
     # Clear screen to light gray background
     sdl2.SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255)
     sdl2.SDL_RenderClear(renderer)
+    
+    # Calculate layout with 5% vertical offset
+    vertical_offset = int(height * 0.05)
+    padding = 30
+    cover_size = min(width - padding * 2, (height - padding * 4) // 2)
+    cover_x = (width - cover_size) // 2
+    cover_y = padding + vertical_offset
+    
+    button_rects = {}
     
     # Calculate layout with 5% vertical offset
     vertical_offset = int(height * 0.05)
@@ -349,6 +373,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         like_x = (width - button_size) // 2
         draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 35, *like_color, 255)
         render_text_centered(renderer, font_icons, "favorite", like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        button_rects['like'] = (like_x, button_y, button_size, button_size)
     else:
         # Calculate button positions to center them
         total_buttons_width = button_size * 4 + button_spacing * 3
@@ -358,29 +383,48 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         prev_x = buttons_start_x
         draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, 35, *prev_color, 255)
         render_text_centered(renderer, font_icons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        button_rects['prev'] = (prev_x, button_y, button_size, button_size)
         
         # Play/Pause button (play_arrow icon)
         play_x = prev_x + button_size + button_spacing
         draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, 35, *play_color, 255)
         render_text_centered(renderer, font_icons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        button_rects['play'] = (play_x, button_y, button_size, button_size)
         
         # Next button (skip_next icon)
         next_x = play_x + button_size + button_spacing
         draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, 35, *next_color, 255)
         render_text_centered(renderer, font_icons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        button_rects['next'] = (next_x, button_y, button_size, button_size)
         
         # Like button (favorite icon)
         like_x = next_x + button_size + button_spacing
         draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 35, *like_color, 255)
         render_text_centered(renderer, font_icons, "favorite", like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        button_rects['like'] = (like_x, button_y, button_size, button_size)
+    
+    return button_rects
 
 
 def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False):
-    """Draw the Now Playing UI based on orientation"""
+    """Draw the Now Playing UI based on orientation
+    
+    Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
+    """
     if is_portrait:
-        draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control)
+        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control)
     else:
-        draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control)
+        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control)
+
+def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False):
+    """Draw the Now Playing UI based on orientation
+    
+    Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
+    """
+    if is_portrait:
+        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control)
+    else:
+        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control)
 
 
 def main():
@@ -478,19 +522,26 @@ def main():
         
         if not font_large or not font_medium or not font_small or not font_icons:
             print(f"Error loading fonts: {sdlttf.TTF_GetError()}")
-            sdl2.SDL_DestroyRenderer(renderer)
-            sdl2.SDL_DestroyWindow(window)
-            return 1
-        
-        # Set renderer logical size to handle rotation
-        if args.rotate in [90, 270]:
-            sdl2.SDL_RenderSetLogicalSize(renderer, display_mode.h, display_mode.w)
-        else:
-            sdl2.SDL_RenderSetLogicalSize(renderer, display_mode.w, display_mode.h)
-        
         # Main loop
         running = True
         event = sdl2.SDL_Event()
+        
+        # Draw initial frame to get button positions (use list to make it mutable in closure)
+        sdl2.SDL_RenderClear(renderer)
+        button_rects = [draw_now_playing_ui(renderer, display_mode.w, display_mode.h, 
+                          font_large, font_medium, font_small, font_icons, is_portrait, 
+                          args.bw_buttons, args.no_control)]
+        sdl2.SDL_RenderPresent(renderer)
+        
+        def check_button_hit(x, y):
+            """Check if coordinates hit any button, return button name or None"""
+            rects = button_rects[0]
+            if not rects:
+                return None
+            for button_name, (bx, by, bw, bh) in rects.items():
+                if bx <= x <= bx + bw and by <= y <= by + bh:
+                    return button_name
+            return None
         
         while running:
             # Handle events
@@ -501,6 +552,18 @@ def main():
                     # Exit on ESC or Q key
                     if event.key.keysym.sym in (sdl2.SDLK_ESCAPE, sdl2.SDLK_q):
                         running = False
+                elif event.type == sdl2.SDL_FINGERDOWN:
+                    # Touch coordinates are normalized (0.0-1.0)
+                    touch_x = int(event.tfinger.x * display_mode.w)
+                    touch_y = int(event.tfinger.y * display_mode.h)
+                    button = check_button_hit(touch_x, touch_y)
+                    if button:
+                        print(f"Button pressed: {button}")
+                elif event.type == sdl2.SDL_MOUSEBUTTONDOWN:
+                    # Mouse coordinates are in pixels
+                    button = check_button_hit(event.button.x, event.button.y)
+                    if button:
+                        print(f"Button pressed: {button}")
             
             # Clear and apply rotation
             sdl2.SDL_RenderClear(renderer)
@@ -519,8 +582,8 @@ def main():
                 # For now, just adjust the logical dimensions
                 pass
             
-            # Draw the Now Playing UI
-            draw_now_playing_ui(renderer, display_mode.w, display_mode.h, 
+            # Draw the Now Playing UI and get button positions
+            button_rects[0] = draw_now_playing_ui(renderer, display_mode.w, display_mode.h, 
                               font_large, font_medium, font_small, font_icons, is_portrait, 
                               args.bw_buttons, args.no_control)
             
