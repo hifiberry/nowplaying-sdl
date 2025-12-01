@@ -33,13 +33,6 @@ def parse_arguments():
         help='Force landscape orientation'
     )
     parser.add_argument(
-        '--rotate',
-        type=int,
-        choices=[0, 90, 180, 270],
-        default=0,
-        help='Rotate display by degrees (0, 90, 180, 270)'
-    )
-    parser.add_argument(
         '--bw-buttons',
         action='store_true',
         help='Use black and white buttons instead of colored'
@@ -48,6 +41,16 @@ def parse_arguments():
         '--no-control',
         action='store_true',
         help='Hide play/pause/next/prev buttons, only show like button'
+    )
+    parser.add_argument(
+        '--minimal-buttons',
+        action='store_true',
+        help='Render buttons without background rectangles and increase icon size by 20%%'
+    )
+    parser.add_argument(
+        '--liked',
+        action='store_true',
+        help='Show filled heart icon (default: unfilled border)'
     )
     return parser.parse_args()
 
@@ -206,7 +209,7 @@ def render_wrapped_text_centered(renderer, font, text, center_x, y, max_width, r
     return len(lines) * line_height
 
 
-def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False):
+def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False):
     """Draw the Now Playing UI in landscape orientation
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
@@ -265,11 +268,21 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         next_color = (60, 60, 60)
         like_color = (200, 50, 50)
     
+    # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
+    if minimal_buttons:
+        font_icons_buttons = sdlttf.TTF_OpenFont(b"/home/matuschd/nowplaying-sdl/MaterialIcons-Regular.ttf", int(48 * 1.5))
+    else:
+        font_icons_buttons = font_icons
+    
     if no_control:
-        # Only show like button, centered
+        # Only show like button, centered (filled if liked, border if not)
+        like_icon = "favorite" if liked else "favorite_border"
         like_x = content_x + (content_width - button_size) // 2
-        draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 40, *like_color, 255)
-        render_text_centered(renderer, font_icons, "favorite", like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 40, *like_color, 255)
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        else:
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color)
         button_rects['like'] = (like_x, button_y, button_size, button_size)
     else:
         # Calculate button positions to center them
@@ -278,32 +291,48 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         
         # Previous button (skip_previous icon)
         prev_x = buttons_start_x
-        draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, 40, *prev_color, 255)
-        render_text_centered(renderer, font_icons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, 40, *prev_color, 255)
+            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, *prev_color)
         button_rects['prev'] = (prev_x, button_y, button_size, button_size)
         
         # Play/Pause button (play_arrow icon)
         play_x = prev_x + button_size + button_spacing
-        draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, 40, *play_color, 255)
-        render_text_centered(renderer, font_icons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, 40, *play_color, 255)
+            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, *play_color)
         button_rects['play'] = (play_x, button_y, button_size, button_size)
         
         # Next button (skip_next icon)
         next_x = play_x + button_size + button_spacing
-        draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, 40, *next_color, 255)
-        render_text_centered(renderer, font_icons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, 40, *next_color, 255)
+            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, *next_color)
         button_rects['next'] = (next_x, button_y, button_size, button_size)
         
-        # Like button (favorite icon)
+        # Like button (favorite icon - filled if liked, border if not)
+        like_icon = "favorite" if liked else "favorite_border"
         like_x = next_x + button_size + button_spacing
-        draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 40, *like_color, 255)
-        render_text_centered(renderer, font_icons, "favorite", like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 40, *like_color, 255)
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        else:
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color)
         button_rects['like'] = (like_x, button_y, button_size, button_size)
+    
+    if minimal_buttons and font_icons_buttons != font_icons:
+        sdlttf.TTF_CloseFont(font_icons_buttons)
     
     return button_rects
 
 
-def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False):
+def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False):
     """Draw the Now Playing UI in portrait orientation
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
@@ -368,11 +397,21 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         next_color = (60, 60, 60)
         like_color = (200, 50, 50)
     
+    # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
+    if minimal_buttons:
+        font_icons_buttons = sdlttf.TTF_OpenFont(b"/home/matuschd/nowplaying-sdl/MaterialIcons-Regular.ttf", int(48 * 1.5))
+    else:
+        font_icons_buttons = font_icons
+    
     if no_control:
-        # Only show like button, centered
+        # Only show like button, centered (filled if liked, border if not)
+        like_icon = "favorite" if liked else "favorite_border"
         like_x = (width - button_size) // 2
-        draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 35, *like_color, 255)
-        render_text_centered(renderer, font_icons, "favorite", like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 35, *like_color, 255)
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        else:
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color)
         button_rects['like'] = (like_x, button_y, button_size, button_size)
     else:
         # Calculate button positions to center them
@@ -381,50 +420,56 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         
         # Previous button (skip_previous icon)
         prev_x = buttons_start_x
-        draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, 35, *prev_color, 255)
-        render_text_centered(renderer, font_icons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, 35, *prev_color, 255)
+            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, *prev_color)
         button_rects['prev'] = (prev_x, button_y, button_size, button_size)
         
         # Play/Pause button (play_arrow icon)
         play_x = prev_x + button_size + button_spacing
-        draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, 35, *play_color, 255)
-        render_text_centered(renderer, font_icons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, 35, *play_color, 255)
+            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, *play_color)
         button_rects['play'] = (play_x, button_y, button_size, button_size)
         
         # Next button (skip_next icon)
         next_x = play_x + button_size + button_spacing
-        draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, 35, *next_color, 255)
-        render_text_centered(renderer, font_icons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, 35, *next_color, 255)
+            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, *next_color)
         button_rects['next'] = (next_x, button_y, button_size, button_size)
         
-        # Like button (favorite icon)
+        # Like button (favorite icon - filled if liked, border if not)
+        like_icon = "favorite" if liked else "favorite_border"
         like_x = next_x + button_size + button_spacing
-        draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 35, *like_color, 255)
-        render_text_centered(renderer, font_icons, "favorite", like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 35, *like_color, 255)
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255)
+        else:
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color)
         button_rects['like'] = (like_x, button_y, button_size, button_size)
+    
+    if minimal_buttons and font_icons_buttons != font_icons:
+        sdlttf.TTF_CloseFont(font_icons_buttons)
     
     return button_rects
 
 
-def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False):
+def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False):
     """Draw the Now Playing UI based on orientation
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
     if is_portrait:
-        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control)
+        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked)
     else:
-        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control)
-
-def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False):
-    """Draw the Now Playing UI based on orientation
-    
-    Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
-    """
-    if is_portrait:
-        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control)
-    else:
-        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control)
+        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked)
 
 
 def main():
@@ -461,6 +506,8 @@ def main():
             return 1
         
         # Determine orientation
+        screen_is_portrait = display_mode.h > display_mode.w
+        
         if args.portrait:
             is_portrait = True
             orientation_str = "portrait (forced)"
@@ -469,8 +516,16 @@ def main():
             orientation_str = "landscape (forced)"
         else:
             # Auto-detect based on display resolution
-            is_portrait = display_mode.h > display_mode.w
+            is_portrait = screen_is_portrait
             orientation_str = "portrait (auto)" if is_portrait else "landscape (auto)"
+        
+        # Validate that orientation matches screen
+        if is_portrait != screen_is_portrait:
+            screen_orientation = "portrait" if screen_is_portrait else "landscape"
+            desired_orientation = "portrait" if is_portrait else "landscape"
+            print(f"Error: Screen is {screen_orientation} ({display_mode.w}x{display_mode.h}) but {desired_orientation} mode was requested.")
+            print(f"Please use --{'portrait' if screen_is_portrait else 'landscape'} or allow auto-detection.")
+            return 1
         
         print(f"Using display {args.display}: {display_mode.w}x{display_mode.h} @ {display_mode.refresh_rate}Hz ({orientation_str})")
         
@@ -480,21 +535,13 @@ def main():
             print(f"Error getting display bounds: {sdl2.SDL_GetError()}")
             return 1
         
-        # Adjust dimensions based on rotation
-        if args.rotate in [90, 270]:
-            window_w = display_mode.h
-            window_h = display_mode.w
-        else:
-            window_w = display_mode.w
-            window_h = display_mode.h
-        
         # Create window on the specified display
         window = sdl2.SDL_CreateWindow(
             b"Now Playing",
             bounds.x,  # Position on the specified display
             bounds.y,
-            window_w,
-            window_h,
+            display_mode.w,
+            display_mode.h,
             sdl2.SDL_WINDOW_SHOWN | sdl2.SDL_WINDOW_FULLSCREEN_DESKTOP
         )
         
@@ -527,10 +574,12 @@ def main():
         event = sdl2.SDL_Event()
         
         # Draw initial frame to get button positions (use list to make it mutable in closure)
+        # Track liked state (mutable so it can be toggled)
+        liked_state = [args.liked]
         sdl2.SDL_RenderClear(renderer)
         button_rects = [draw_now_playing_ui(renderer, display_mode.w, display_mode.h, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
-                          args.bw_buttons, args.no_control)]
+                          args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0])]
         sdl2.SDL_RenderPresent(renderer)
         
         def check_button_hit(x, y):
@@ -559,36 +608,33 @@ def main():
                     button = check_button_hit(touch_x, touch_y)
                     if button:
                         print(f"Button pressed: {button}")
+                        # Toggle liked state when like button is pressed
+                        if button == 'like':
+                            liked_state[0] = not liked_state[0]
+                            print(f"Liked: {liked_state[0]}")
                 elif event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                     # Mouse coordinates are in pixels
                     button = check_button_hit(event.button.x, event.button.y)
                     if button:
                         print(f"Button pressed: {button}")
+                        # Toggle liked state when like button is pressed
+                        if button == 'like':
+                            liked_state[0] = not liked_state[0]
+                            print(f"Liked: {liked_state[0]}")
             
-            # Clear and apply rotation
+            # Clear renderer
             sdl2.SDL_RenderClear(renderer)
-            
-            # Save current render state
-            if args.rotate != 0:
-                # Get the center point for rotation
-                if args.rotate in [90, 270]:
-                    center_x = display_mode.h // 2
-                    center_y = display_mode.w // 2
-                else:
-                    center_x = display_mode.w // 2
-                    center_y = display_mode.h // 2
-                
-                # Apply rotation by rendering to a texture (simplified approach)
-                # For now, just adjust the logical dimensions
-                pass
             
             # Draw the Now Playing UI and get button positions
             button_rects[0] = draw_now_playing_ui(renderer, display_mode.w, display_mode.h, 
                               font_large, font_medium, font_small, font_icons, is_portrait, 
-                              args.bw_buttons, args.no_control)
+                              args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0])
             
             # Present the rendered frame
             sdl2.SDL_RenderPresent(renderer)
+            
+            # Small delay to prevent busy loop
+            sdl2.SDL_Delay(10)
         
         # Cleanup
         if font_large:
