@@ -32,6 +32,8 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
         rotation: Rotation angle in degrees
         screen_width, screen_height: Physical screen dimensions
     """
+    print(f"render_coverart: pos=({x},{y}) size={size} rotation={rotation} screen={screen_width}x{screen_height} imagefile={imagefile}")
+    
     # Draw background square
     draw_rounded_rect(renderer, x, y, size, size, 20, 100, 100, 100, 255, rotation, screen_width, screen_height)
     
@@ -53,10 +55,30 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
                     
                     # Create rect in screen coordinates
                     rect = sdl2.SDL_Rect(screen_x, screen_y, size, size)
+                    print(f"  Cover 90/270: layout=({x},{y}) screen=({screen_x},{screen_y}) size={size}")
+                    
+                    # Debug: Draw red bounding box
+                    sdl2.SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255)
+                    sdl2.SDL_RenderDrawRect(renderer, rect)
+                    
                     center = sdl2.SDL_Point(size // 2, size // 2)
                     sdl2.SDL_RenderCopyEx(renderer, texture, None, rect, rotation, center, sdl2.SDL_FLIP_NONE)
                 else:
-                    rect = sdl2.SDL_Rect(x, y, size, size)
+                    # For 0° and 180° rotations
+                    if rotation == 180:
+                        # Transform coordinates for 180° rotation
+                        screen_x = screen_width - (x + size)
+                        screen_y = screen_height - (y + size)
+                        rect = sdl2.SDL_Rect(screen_x, screen_y, size, size)
+                        print(f"  Cover 180: layout=({x},{y}) screen=({screen_x},{screen_y}) size={size}")
+                    else:
+                        rect = sdl2.SDL_Rect(x, y, size, size)
+                        print(f"  Cover 0: rect=({x},{y}) size={size}")
+                    
+                    # Debug: Draw red bounding box
+                    sdl2.SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255)
+                    sdl2.SDL_RenderDrawRect(renderer, rect)
+                    
                     if rotation == 180:
                         center = sdl2.SDL_Point(size // 2, size // 2)
                         sdl2.SDL_RenderCopyEx(renderer, texture, None, rect, rotation, center, sdl2.SDL_FLIP_NONE)

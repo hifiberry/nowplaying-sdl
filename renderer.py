@@ -50,17 +50,24 @@ def draw_rounded_rect(renderer, x, y, w, h, radius, r, g, b, a, rotation=0, scre
         screen_width, screen_height: Physical screen dimensions (required for rotation)
     """
     # Transform coordinates based on rotation
-    if rotation != 0:
+    if rotation in (90, 270):
         # For 90° and 270° rotations, dimensions are swapped
         # Need to use swapped screen dimensions for the transform
-        if rotation in (90, 270):
-            tx, ty = transform_coordinates(x, y, h, w, screen_height, screen_width, rotation)
-            x, y, w, h = tx, ty, h, w
-        else:
-            tx, ty = transform_coordinates(x, y, w, h, screen_width, screen_height, rotation)
-            x, y = tx, ty
+        tx, ty = transform_coordinates(x, y, h, w, screen_height, screen_width, rotation)
+        x, y, w, h = tx, ty, h, w
+    elif rotation == 180:
+        # For 180° rotation, transform coordinates
+        tx, ty = transform_coordinates(x, y, w, h, screen_width, screen_height, rotation)
+        x, y = tx, ty
     
     # Direct rendering after coordinate transformation
+    print(f"draw_rounded_rect: original=({x},{y},{w},{h}) rotation={rotation} transformed=({x},{y},{w},{h})")
+    
+    # Debug: Draw blue bounding box
+    sdl2.SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255)
+    debug_rect = sdl2.SDL_Rect(x, y, w, h)
+    sdl2.SDL_RenderDrawRect(renderer, debug_rect)
+    
     sdl2.SDL_SetRenderDrawColor(renderer, r, g, b, a)
     
     # Draw filled rectangles to make up the rounded rect
@@ -127,6 +134,12 @@ def render_text(renderer, font, text, x, y, r, g, b, rotation=0, screen_width=0,
                 else:  # 270
                     center_x = layout_center_y
                     center_y = screen_height - layout_center_x
+            elif rotation == 180:
+                # For 180°: flip both x and y
+                layout_center_x = x + surface.contents.w // 2
+                layout_center_y = y + surface.contents.h // 2
+                center_x = screen_width - layout_center_x
+                center_y = screen_height - layout_center_y
             else:
                 center_x = x + surface.contents.w // 2
                 center_y = y + surface.contents.h // 2
@@ -181,6 +194,10 @@ def render_text_centered(renderer, font, text, center_x, center_y, r, g, b, rota
                 else:  # 270
                     screen_center_x = center_y
                     screen_center_y = screen_height - center_x
+            elif rotation == 180:
+                # For 180°: flip both x and y
+                screen_center_x = screen_width - center_x
+                screen_center_y = screen_height - center_y
             else:
                 screen_center_x = center_x
                 screen_center_y = center_y
