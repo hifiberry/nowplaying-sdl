@@ -171,6 +171,11 @@ def parse_arguments():
         default=0,
         help='Rotation angle in degrees (0, 90, 180, or 270)'
     )
+    parser.add_argument(
+        '--demo',
+        action='store_true',
+        help='Use demo artist, title and cover art'
+    )
     return parser.parse_args()
 
 
@@ -185,12 +190,13 @@ def get_display_info(display_index):
     return mode
 
 
-def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0):
+def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False):
     """Draw the Now Playing UI in landscape orientation
     
     Args:
         width, height: Layout dimensions (may be swapped for rotation)
         screen_width, screen_height: Physical screen dimensions
+        demo: If True, use demo data; if False, use empty values
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -326,12 +332,13 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     return button_rects
 
 
-def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0):
+def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False):
     """Draw the Now Playing UI in portrait orientation
     
     Args:
         width, height: Layout dimensions (may be swapped for rotation)
         screen_width, screen_height: Physical screen dimensions
+        demo: If True, use demo data; if False, use empty values
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -349,8 +356,9 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     
     button_rects = {}
     
-    # Render album cover (with demo image)
-    render_coverart(renderer, cover_x, cover_y, cover_size, "demo_cover.jpg", font_icons, rotation, screen_width, screen_height)
+    # Render album cover (with demo image or empty)
+    cover_file = get_resource_path("demo_cover.jpg") if demo else None
+    render_coverart(renderer, cover_x, cover_y, cover_size, cover_file, font_icons, rotation, screen_width, screen_height)
     
     # Content area below cover
     content_y = cover_y + cover_size + padding + int(height * 0.05)  # Move 5% down
@@ -359,11 +367,11 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     center_x = width // 2
     
     # Song title (centered, wrapped to max 2 lines)
-    title = "Never Gonna Give You Up"
+    title = "Never Gonna Give You Up" if demo else ""
     title_height = render_wrapped_text_centered(renderer, font_large, title, center_x, content_y, max_text_width, 30, 30, 30, max_lines=2, rotation=rotation, width=screen_width, height=screen_height)
     
     # Artist name (centered, single line with truncation)
-    artist = "Rick Astley"
+    artist = "Rick Astley" if demo else ""
     artist_text = truncate_text(font_medium, artist, max_text_width)
     render_text_centered(renderer, font_medium, artist_text, center_x, content_y + title_height + 20, 100, 100, 100, rotation, screen_width, screen_height)
     
@@ -448,15 +456,15 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     return button_rects
 
 
-def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0):
+def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False):
     """Draw the Now Playing UI based on orientation
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
     if is_portrait:
-        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height)
+        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo)
     else:
-        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height)
+        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo)
 
 
 def main():
@@ -590,7 +598,7 @@ def main():
         button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
                           args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                          args.rotation, display_mode.w, display_mode.h)]
+                          args.rotation, display_mode.w, display_mode.h, args.demo)]
         sdl2.SDL_RenderPresent(renderer)
         
         def check_button_hit(x, y):
