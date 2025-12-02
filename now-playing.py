@@ -81,7 +81,7 @@ def get_display_info(display_index):
     return mode
 
 
-def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0):
+def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0):
     """Draw the Now Playing UI in landscape orientation
     
     Args:
@@ -90,6 +90,10 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
+    # Layout customization constants
+    TEXT_VERTICAL_OFFSET_PERCENT = 0.10  # Move text down by 10% of height
+    BUTTON_VERTICAL_OFFSET_PERCENT = -0.10  # Move buttons up by 10% of height (negative = up)
+    
     # Clear screen to light gray background
     sdl2.SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255)
     sdl2.SDL_RenderClear(renderer)
@@ -116,22 +120,36 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     content_width = width - content_x - padding
     content_center_x = content_x + content_width // 2
     
-    # Song title (centered)
+    # Song title (centered) - wrap to max 40% display width
     title = "Never Gonna Give You Up"
-    render_text_centered(renderer, font_large, title, content_center_x, content_y + 28, 30, 30, 30, rotation, screen_width, screen_height)
+    max_text_width = int(width * 0.4)
+    wrapped_title = wrap_text(font_large, title, max_text_width)
+    if len(wrapped_title) > 2:
+        # Truncate to 2 lines with ellipsis
+        wrapped_title = wrapped_title[:2]
+        if len(wrapped_title[1]) > 0:
+            wrapped_title[1] = wrapped_title[1][:-3] + "..." if len(wrapped_title[1]) > 3 else wrapped_title[1] + "..."
     
-    # Artist name (centered)
+    title_y = content_y + 28 + int(height * TEXT_VERTICAL_OFFSET_PERCENT)
+    for i, line in enumerate(wrapped_title):
+        render_text_centered(renderer, font_large, line, content_center_x, title_y + i * 60, 30, 30, 30, rotation, screen_width, screen_height)
+    
+    # Artist name (centered) - wrap to max 40% display width
     artist = "Rick Astley"
-    render_text_centered(renderer, font_medium, artist, content_center_x, content_y + 105, 100, 100, 100, rotation, screen_width, screen_height)
+    wrapped_artist = wrap_text(font_medium, artist, max_text_width)
+    if len(wrapped_artist) > 2:
+        wrapped_artist = wrapped_artist[:2]
+        if len(wrapped_artist[1]) > 0:
+            wrapped_artist[1] = wrapped_artist[1][:-3] + "..." if len(wrapped_artist[1]) > 3 else wrapped_artist[1] + "..."
     
-    # Album name (centered)
-    album = "Whenever You Need Somebody"
-    render_text_centered(renderer, font_small, album, content_center_x, content_y + 144, 150, 150, 150, rotation, screen_width, screen_height)
+    artist_y = content_y + 105 + (len(wrapped_title) - 1) * 60 + int(height * TEXT_VERTICAL_OFFSET_PERCENT)
+    for i, line in enumerate(wrapped_artist):
+        render_text_centered(renderer, font_medium, line, content_center_x, artist_y + i * 50, 100, 100, 100, rotation, screen_width, screen_height)
     
-    # Control buttons area
-    button_y = content_y + 280
+    # Control buttons area - align bottom of buttons with bottom of cover
     button_size = 100
     button_spacing = 25
+    button_y = cover_y + cover_size - button_size + int(height * BUTTON_VERTICAL_OFFSET_PERCENT)
     
     # Determine button colors
     if bw_buttons:
@@ -344,7 +362,7 @@ def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_s
     if is_portrait:
         return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height)
     else:
-        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height)
+        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height)
 
 
 def main():
