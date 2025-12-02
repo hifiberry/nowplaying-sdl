@@ -6,8 +6,10 @@ Now Playing Display - Shows currently playing media on SDL screen
 import sdl2
 import sdl2.ext
 import sdl2.sdlttf as sdlttf
+import sdl2.sdlimage as sdlimage
 import sys
 import argparse
+import os
 from renderer import (
     draw_rounded_rect,
     render_text,
@@ -16,6 +18,63 @@ from renderer import (
     truncate_text,
     render_wrapped_text_centered
 )
+
+
+def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, screen_width=0, screen_height=0):
+    """Render album cover art or placeholder
+    
+    Args:
+        renderer: SDL2 renderer
+        x, y: Top-left position
+        size: Width and height of the cover square
+        imagefile: Path to cover image file, or None for placeholder
+        font_icons: Material Icons font for placeholder icon
+        rotation: Rotation angle in degrees
+        screen_width, screen_height: Physical screen dimensions
+    """
+    # Draw background square
+    draw_rounded_rect(renderer, x, y, size, size, 20, 100, 100, 100, 255, rotation, screen_width, screen_height)
+    
+    if imagefile and os.path.exists(imagefile):
+        # Load and render the image
+        surface = sdlimage.IMG_Load(imagefile.encode('utf-8'))
+        if surface:
+            texture = sdl2.SDL_CreateTextureFromSurface(renderer, surface)
+            if texture:
+                # Transform coordinates for rotation if needed
+                if rotation in [90, 270]:
+                    # Transform layout coordinates to screen coordinates
+                    if rotation == 90:
+                        screen_x = screen_width - (y + size)
+                        screen_y = x
+                    else:  # 270
+                        screen_x = y
+                        screen_y = screen_height - (x + size)
+                    
+                    # Create rect in screen coordinates
+                    rect = sdl2.SDL_Rect(screen_x, screen_y, size, size)
+                    center = sdl2.SDL_Point(size // 2, size // 2)
+                    sdl2.SDL_RenderCopyEx(renderer, texture, None, rect, rotation, center, sdl2.SDL_FLIP_NONE)
+                else:
+                    rect = sdl2.SDL_Rect(x, y, size, size)
+                    if rotation == 180:
+                        center = sdl2.SDL_Point(size // 2, size // 2)
+                        sdl2.SDL_RenderCopyEx(renderer, texture, None, rect, rotation, center, sdl2.SDL_FLIP_NONE)
+                    else:
+                        sdl2.SDL_RenderCopy(renderer, texture, None, rect)
+                
+                sdl2.SDL_DestroyTexture(texture)
+            sdl2.SDL_FreeSurface(surface)
+    else:
+        # Draw placeholder icon (larger size)
+        album_icon = "album"
+        # Use a larger font size for the icon - scale with cover size
+        icon_size = int(size * 0.4)  # 40% of cover size
+        font_icons_large = sdlttf.TTF_OpenFont(b"/home/matuschd/nowplaying-sdl/MaterialIcons-Regular.ttf", icon_size)
+        if font_icons_large:
+            render_text_centered(renderer, font_icons_large, album_icon, 
+                               x + size // 2, y + size // 2, 200, 200, 200, rotation, screen_width, screen_height)
+            sdlttf.TTF_CloseFont(font_icons_large)
 
 
 def parse_arguments():
@@ -106,13 +165,8 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     
     button_rects = {}
     
-    # Draw album cover placeholder (dark gray square)
-    draw_rounded_rect(renderer, cover_x, cover_y, cover_size, cover_size, 20, 100, 100, 100, 255, rotation, screen_width, screen_height)
-    
-    # Draw album icon in center of cover
-    album_icon = "album"
-    render_text_centered(renderer, font_icons, album_icon, 
-                cover_x + cover_size // 2, cover_y + cover_size // 2, 200, 200, 200, rotation, screen_width, screen_height)
+    # Render album cover (with demo image)
+    render_coverart(renderer, cover_x, cover_y, cover_size, "demo_cover.jpg", font_icons, rotation, screen_width, screen_height)
     
     # Right side content area
     content_x = cover_x + cover_size + padding * 2
@@ -250,13 +304,8 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     
     button_rects = {}
     
-    # Draw album cover placeholder (dark gray square)
-    draw_rounded_rect(renderer, cover_x, cover_y, cover_size, cover_size, 20, 100, 100, 100, 255, rotation, screen_width, screen_height)
-    
-    # Draw music note symbol in center of cover
-    note_text = "♪"
-    render_text(renderer, font_large, note_text, 
-                cover_x + cover_size // 2 - 30, cover_y + cover_size // 2 - 40, 200, 200, 200, rotation, screen_width, screen_height)
+    # Render album cover (with demo image)
+    render_coverart(renderer, cover_x, cover_y, cover_size, "demo_cover.jpg", font_icons, rotation, screen_width, screen_height)
     
     # Content area below cover
     content_y = cover_y + cover_size + padding + int(height * 0.05)  # Move 5% down
@@ -377,6 +426,14 @@ def main():
     # Initialize SDL_ttf
     if sdlttf.TTF_Init() != 0:
         print(f"Error initializing SDL_ttf: {sdlttf.TTF_GetError()}")
+        sdl2.SDL_Quit()
+        return 1
+    
+    # Initialize SDL_image
+    img_flags = sdlimage.IMG_INIT_JPG | sdlimage.IMG_INIT_PNG
+    if sdlimage.IMG_Init(img_flags) != img_flags:
+        print(f"Error initializing SDL_image: {sdlimage.IMG_GetError()}")
+        sdlttf.TTF_Quit()
         sdl2.SDL_Quit()
         return 1
     
@@ -558,6 +615,7 @@ def main():
         sdl2.SDL_DestroyWindow(window)
         
     finally:
+        sdlimage.IMG_Quit()
         sdlttf.TTF_Quit()
         sdl2.SDL_Quit()
     
