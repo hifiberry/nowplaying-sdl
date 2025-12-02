@@ -1,0 +1,20 @@
+[Unit]
+Description=HiFiBerry Now Playing Display
+After=graphical.target sound.target
+Wants=audiocontrol.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/nowplaying-sdl
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Environment for display
+Environment=DISPLAY=:0
+Environment=SDL_VIDEODRIVER=kmsdrm
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+
+[Install]
+WantedBy=default.target

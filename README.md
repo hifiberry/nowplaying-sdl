@@ -27,13 +27,57 @@ sudo apt-get install -f  # Install dependencies
 pip3 install .
 ```
 
+## Configuration
+
+The application can be configured via a configuration file or command-line arguments. Command-line arguments take precedence over config file settings.
+
+### Config File Locations
+
+The application looks for configuration files in this order:
+1. Path specified with `--config` option
+2. `/etc/nowplaying_sdl.conf` (if running as root)
+3. `~/.config/nowplaying_sdl.conf` (user config)
+4. `/etc/nowplaying_sdl.conf` (fallback)
+
+A default configuration file is installed to `/usr/share/nowplaying-sdl/nowplaying_sdl.conf` which can be copied to one of the above locations and customized.
+
+### Example Configuration
+
+```ini
+[nowplaying]
+display = 0
+rotation = 90
+api_url = http://localhost:1080/api
+bw_buttons = false
+no_control = false
+minimal_buttons = false
+liked = false
+demo = false
+```
+
+### Systemd Service
+
+A systemd user service is provided for automatic startup:
+
+```bash
+# Enable and start the service
+systemctl --user enable nowplaying-sdl
+systemctl --user start nowplaying-sdl
+
+# Check status
+systemctl --user status nowplaying-sdl
+```
+
 ## Usage
 
 ```bash
-# Basic usage
+# Basic usage (uses config file)
 nowplaying-sdl
 
-# With rotation
+# Use specific config file
+nowplaying-sdl --config /path/to/config.conf
+
+# Override config with command-line options
 nowplaying-sdl --rotation 90
 
 # Portrait mode
@@ -53,6 +97,12 @@ nowplaying-sdl --bw-buttons
 
 # Specific display
 nowplaying-sdl --display 1
+
+# Demo mode (sample data)
+nowplaying-sdl --demo
+
+# Custom API URL
+nowplaying-sdl --api-url http://192.168.1.100:1080/api
 ```
 
 ## Dependencies

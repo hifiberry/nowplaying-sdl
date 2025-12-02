@@ -1,4 +1,5 @@
 include nowplaying_sdl/fonts/*.ttf
 include nowplaying_sdl/*.jpg
+include nowplaying_sdl.conf
 include LICENSE
 include README.md

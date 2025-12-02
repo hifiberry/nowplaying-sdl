@@ -61,12 +61,6 @@ def draw_rounded_rect(renderer, x, y, w, h, radius, r, g, b, a, rotation=0, scre
         x, y = tx, ty
     
     # Direct rendering after coordinate transformation
-    print(f"draw_rounded_rect: original=({x},{y},{w},{h}) rotation={rotation} transformed=({x},{y},{w},{h})")
-    
-    # Debug: Draw blue bounding box
-    sdl2.SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255)
-    debug_rect = sdl2.SDL_Rect(x, y, w, h)
-    sdl2.SDL_RenderDrawRect(renderer, debug_rect)
     
     sdl2.SDL_SetRenderDrawColor(renderer, r, g, b, a)
     
@@ -205,8 +199,6 @@ def render_text_centered(renderer, font, text, center_x, center_y, r, g, b, rota
             # Place rect so its center is at screen center position
             rect = sdl2.SDL_Rect(screen_center_x - surface.contents.w // 2, screen_center_y - surface.contents.h // 2,
                                 surface.contents.w, surface.contents.h)
-            
-            print(f"render_text_centered: text='{text[:20]}' layout center=({center_x},{center_y}) screen center=({screen_center_x},{screen_center_y}) size={surface.contents.w}x{surface.contents.h} rect=({rect.x},{rect.y}) rotation={rotation}")
             
             center = sdl2.SDL_Point(surface.contents.w // 2, surface.contents.h // 2)
             sdl2.SDL_RenderCopyEx(renderer, texture, None, rect, rotation, center, sdl2.SDL_FLIP_NONE)

@@ -11,6 +11,9 @@ import sys
 import argparse
 import os
 from pathlib import Path
+from .audiocontrol import AudioControlClient
+from .config import Config
+from .coverart import CoverArtCache
 from .renderer import (
     draw_rounded_rect,
     render_text,
@@ -54,8 +57,6 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
         rotation: Rotation angle in degrees
         screen_width, screen_height: Physical screen dimensions
     """
-    print(f"render_coverart: pos=({x},{y}) size={size} rotation={rotation} screen={screen_width}x{screen_height} imagefile={imagefile}")
-    
     # Draw background square
     draw_rounded_rect(renderer, x, y, size, size, 20, 100, 100, 100, 255, rotation, screen_width, screen_height)
     
@@ -77,11 +78,6 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
                     
                     # Create rect in screen coordinates
                     rect = sdl2.SDL_Rect(screen_x, screen_y, size, size)
-                    print(f"  Cover 90/270: layout=({x},{y}) screen=({screen_x},{screen_y}) size={size}")
-                    
-                    # Debug: Draw red bounding box
-                    sdl2.SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255)
-                    sdl2.SDL_RenderDrawRect(renderer, rect)
                     
                     center = sdl2.SDL_Point(size // 2, size // 2)
                     sdl2.SDL_RenderCopyEx(renderer, texture, None, rect, rotation, center, sdl2.SDL_FLIP_NONE)
@@ -92,14 +88,8 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
                         screen_x = screen_width - (x + size)
                         screen_y = screen_height - (y + size)
                         rect = sdl2.SDL_Rect(screen_x, screen_y, size, size)
-                        print(f"  Cover 180: layout=({x},{y}) screen=({screen_x},{screen_y}) size={size}")
                     else:
                         rect = sdl2.SDL_Rect(x, y, size, size)
-                        print(f"  Cover 0: rect=({x},{y}) size={size}")
-                    
-                    # Debug: Draw red bounding box
-                    sdl2.SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255)
-                    sdl2.SDL_RenderDrawRect(renderer, rect)
                     
                     if rotation == 180:
                         center = sdl2.SDL_Point(size // 2, size // 2)
@@ -123,58 +113,66 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
 
 
 def parse_arguments():
-    """Parse command line arguments"""
+    """Parse command-line arguments"""
     parser = argparse.ArgumentParser(
         description='Now Playing Display - Shows currently playing media'
     )
     parser.add_argument(
+        '--config',
+        type=str,
+        help='Path to configuration file (default: auto-detect from /etc or ~/.config)'
+    )
+    parser.add_argument(
         '--display',
         type=int,
-        default=0,
-        help='Display number to use (default: 0)'
+        help='Display number to use (default: 0, or from config file)'
     )
     orientation_group = parser.add_mutually_exclusive_group()
     orientation_group.add_argument(
         '--portrait',
         action='store_true',
-        help='Force portrait orientation'
+        help='Force portrait orientation (overrides config file)'
     )
     orientation_group.add_argument(
         '--landscape',
         action='store_true',
-        help='Force landscape orientation'
+        help='Force landscape orientation (overrides config file)'
     )
     parser.add_argument(
         '--bw-buttons',
         action='store_true',
-        help='Use black and white buttons instead of colored'
+        help='Use black and white buttons instead of colored (overrides config file)'
     )
     parser.add_argument(
         '--no-control',
         action='store_true',
-        help='Hide play/pause/next/prev buttons, only show like button'
+        help='Hide play/pause/next/prev buttons, only show like button (overrides config file)'
     )
     parser.add_argument(
         '--minimal-buttons',
         action='store_true',
-        help='Render buttons without background rectangles and increase icon size by 20%%'
+        help='Render buttons without background rectangles and increase icon size by 20%% (overrides config file)'
     )
     parser.add_argument(
         '--liked',
         action='store_true',
-        help='Show filled heart icon (default: unfilled border)'
+        help='Show filled heart icon (default: unfilled border, overrides config file)'
     )
     parser.add_argument(
         '--rotation',
         type=int,
         choices=[0, 90, 180, 270],
-        default=0,
-        help='Rotation angle in degrees (0, 90, 180, or 270)'
+        help='Rotation angle in degrees (0, 90, 180, or 270, overrides config file)'
     )
     parser.add_argument(
         '--demo',
         action='store_true',
-        help='Use demo artist, title and cover art'
+        help='Use demo artist, title and cover art (overrides config file)'
+    )
+    parser.add_argument(
+        '--api-url',
+        type=str,
+        help='AudioControl API URL (default: http://localhost:1080/api, overrides config file)'
     )
     return parser.parse_args()
 
@@ -190,13 +188,15 @@ def get_display_info(display_index):
     return mode
 
 
-def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False):
+def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None):
     """Draw the Now Playing UI in landscape orientation
     
     Args:
         width, height: Layout dimensions (may be swapped for rotation)
         screen_width, screen_height: Physical screen dimensions
-        demo: If True, use demo data; if False, use empty values
+        demo: If True, use demo data; if False, use now_playing_data
+        now_playing_data: Dict with artist, title, album, cover_url from AudioControl
+        cover_cache: CoverArtCache instance for downloading cover art
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -216,8 +216,24 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     
     button_rects = {}
     
-    # Render album cover (with demo image)
-    render_coverart(renderer, cover_x, cover_y, cover_size, "demo_cover.jpg", font_icons, rotation, screen_width, screen_height)
+    # Determine data source
+    if demo:
+        cover_file = get_resource_path("demo_cover.jpg")
+        title = "Never Gonna Give You Up"
+        artist = "Rick Astley"
+    elif now_playing_data:
+        # Get cover art (download if needed)
+        cover_url = now_playing_data.get('cover_url')
+        cover_file = cover_cache.get_cover(cover_url) if cover_cache and cover_url else None
+        title = now_playing_data.get('title', '')
+        artist = now_playing_data.get('artist', '')
+    else:
+        cover_file = None
+        title = ""
+        artist = ""
+    
+    # Render album cover
+    render_coverart(renderer, cover_x, cover_y, cover_size, cover_file, font_icons, rotation, screen_width, screen_height)
     
     # Right side content area
     content_x = cover_x + cover_size + padding * 2
@@ -226,7 +242,6 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     content_center_x = content_x + content_width // 2
     
     # Song title (centered) - wrap to max 40% display width
-    title = "Never Gonna Give You Up"
     max_text_width = int(width * 0.4)
     wrapped_title = wrap_text(font_large, title, max_text_width)
     if len(wrapped_title) > 2:
@@ -240,7 +255,6 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         render_text_centered(renderer, font_large, line, content_center_x, title_y + i * 60, 30, 30, 30, rotation, screen_width, screen_height)
     
     # Artist name (centered) - wrap to max 40% display width
-    artist = "Rick Astley"
     wrapped_artist = wrap_text(font_medium, artist, max_text_width)
     if len(wrapped_artist) > 2:
         wrapped_artist = wrapped_artist[:2]
@@ -332,13 +346,15 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     return button_rects
 
 
-def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False):
+def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None):
     """Draw the Now Playing UI in portrait orientation
     
     Args:
         width, height: Layout dimensions (may be swapped for rotation)
         screen_width, screen_height: Physical screen dimensions
-        demo: If True, use demo data; if False, use empty values
+        demo: If True, use demo data; if False, use now_playing_data
+        now_playing_data: Dict with artist, title, album, cover_url from AudioControl
+        cover_cache: CoverArtCache instance for downloading cover art
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -356,8 +372,23 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     
     button_rects = {}
     
-    # Render album cover (with demo image or empty)
-    cover_file = get_resource_path("demo_cover.jpg") if demo else None
+    # Determine data source
+    if demo:
+        cover_file = get_resource_path("demo_cover.jpg")
+        title = "Never Gonna Give You Up"
+        artist = "Rick Astley"
+    elif now_playing_data:
+        # Get cover art (download if needed)
+        cover_url = now_playing_data.get('cover_url')
+        cover_file = cover_cache.get_cover(cover_url) if cover_cache and cover_url else None
+        title = now_playing_data.get('title', '')
+        artist = now_playing_data.get('artist', '')
+    else:
+        cover_file = None
+        title = ""
+        artist = ""
+    
+    # Render album cover
     render_coverart(renderer, cover_x, cover_y, cover_size, cover_file, font_icons, rotation, screen_width, screen_height)
     
     # Content area below cover
@@ -367,11 +398,9 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     center_x = width // 2
     
     # Song title (centered, wrapped to max 2 lines)
-    title = "Never Gonna Give You Up" if demo else ""
     title_height = render_wrapped_text_centered(renderer, font_large, title, center_x, content_y, max_text_width, 30, 30, 30, max_lines=2, rotation=rotation, width=screen_width, height=screen_height)
     
     # Artist name (centered, single line with truncation)
-    artist = "Rick Astley" if demo else ""
     artist_text = truncate_text(font_medium, artist, max_text_width)
     render_text_centered(renderer, font_medium, artist_text, center_x, content_y + title_height + 20, 100, 100, 100, rotation, screen_width, screen_height)
     
@@ -456,20 +485,47 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     return button_rects
 
 
-def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False):
+def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None):
     """Draw the Now Playing UI based on orientation
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
     if is_portrait:
-        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo)
+        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache)
     else:
-        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo)
+        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache)
 
 
 def main():
     """Main application entry point"""
     args = parse_arguments()
+    
+    # Load configuration
+    config = Config(args.config if hasattr(args, 'config') else None)
+    
+    # Merge command-line args with config (args take precedence)
+    # Apply config defaults where args are not specified
+    if args.display is None:
+        args.display = config.get_int('display')
+    if args.rotation is None:
+        args.rotation = config.get_int('rotation')
+    if args.api_url is None:
+        args.api_url = config.get('api_url')
+    if not args.portrait and not args.landscape:
+        if config.get_bool('portrait'):
+            args.portrait = True
+        elif config.get_bool('landscape'):
+            args.landscape = True
+    if not args.bw_buttons:
+        args.bw_buttons = config.get_bool('bw_buttons')
+    if not args.no_control:
+        args.no_control = config.get_bool('no_control')
+    if not args.minimal_buttons:
+        args.minimal_buttons = config.get_bool('minimal_buttons')
+    if not args.liked:
+        args.liked = config.get_bool('liked')
+    if not args.demo:
+        args.demo = config.get_bool('demo')
     
     # Initialize SDL
     if sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO) != 0:
@@ -580,6 +636,17 @@ def main():
         
         if not font_large or not font_medium or not font_small or not font_icons:
             print(f"Error loading fonts: {sdlttf.TTF_GetError()}")
+        
+        # Initialize AudioControl client if not in demo mode
+        ac_client = None
+        if not args.demo:
+            ac_client = AudioControlClient(api_url=args.api_url, update_interval=1.0)
+            ac_client.start()
+            print(f"Connecting to AudioControl API: {args.api_url}")
+        
+        # Initialize cover art cache
+        cover_cache = CoverArtCache()
+        
         # Main loop
         running = True
         event = sdl2.SDL_Event()
@@ -595,10 +662,13 @@ def main():
         layout_width = display_mode.h if args.rotation in (90, 270) else display_mode.w
         layout_height = display_mode.w if args.rotation in (90, 270) else display_mode.h
         
+        # Get now playing data
+        now_playing_data = ac_client.get_current_data() if ac_client else None
+        
         button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
                           args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                          args.rotation, display_mode.w, display_mode.h, args.demo)]
+                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache)]
         sdl2.SDL_RenderPresent(renderer)
         
         def check_button_hit(x, y):
@@ -644,11 +714,14 @@ def main():
             # Clear renderer
             sdl2.SDL_RenderClear(renderer)
             
+            # Get latest now playing data
+            now_playing_data = ac_client.get_current_data() if ac_client else None
+            
             # Draw the Now Playing UI and get button positions
             button_rects[0] = draw_now_playing_ui(renderer, layout_width, layout_height, 
                               font_large, font_medium, font_small, font_icons, is_portrait, 
                               args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                              args.rotation, display_mode.w, display_mode.h)
+                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache)
             
             # Present the rendered frame
             sdl2.SDL_RenderPresent(renderer)
@@ -657,6 +730,8 @@ def main():
             sdl2.SDL_Delay(10)
         
         # Cleanup
+        if ac_client:
+            ac_client.stop()
         if font_large:
             sdlttf.TTF_CloseFont(font_large)
         if font_medium:
