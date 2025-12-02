@@ -1,1 +1,14 @@
 __pycache__/*
+*.pyc
+*.pyo
+*.egg-info/
+*.egg
+build/
+dist/
+.pybuild/
+debian/nowplaying-sdl/
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.log
+debian/*.substvars

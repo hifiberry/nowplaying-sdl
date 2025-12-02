@@ -1,0 +1,29 @@
+Source: nowplaying-sdl
+Section: sound
+Priority: optional
+Maintainer: HiFiBerry <info@hifiberry.com>
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               python3-all,
+               python3-setuptools,
+               python3-sdl2
+Standards-Version: 4.6.0
+Homepage: https://github.com/hifiberry/nowplaying-sdl
+
+Package: nowplaying-sdl
+Architecture: all
+Depends: ${python3:Depends},
+         ${misc:Depends},
+         python3-sdl2,
+         libsdl2-2.0-0,
+         libsdl2-ttf-2.0-0,
+         libsdl2-image-2.0-0,
+         fonts-dejavu-core
+Description: SDL2-based now playing display for music players
+ A simple SDL2-based display for showing currently playing music
+ information with support for:
+  * Screen rotation (0, 90, 180, 270 degrees)
+  * Touch-friendly button controls
+  * Album cover art display
+  * Material Design icons
+  * Multiple display modes (portrait/landscape)

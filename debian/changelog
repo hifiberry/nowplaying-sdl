@@ -1,0 +1,10 @@
+nowplaying-sdl (0.1.0-1) unstable; urgency=medium
+
+  * Initial release
+  * SDL2-based now playing display
+  * Support for screen rotation (0, 90, 180, 270 degrees)
+  * Touch-friendly button controls
+  * Album cover art display
+  * Material Design icons
+
+ -- HiFiBerry <info@hifiberry.com>  Mon, 02 Dec 2024 12:00:00 +0000

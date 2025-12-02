@@ -10,7 +10,8 @@ import sdl2.sdlimage as sdlimage
 import sys
 import argparse
 import os
-from renderer import (
+from pathlib import Path
+from .renderer import (
     draw_rounded_rect,
     render_text,
     render_text_centered,
@@ -19,6 +20,27 @@ from renderer import (
     render_wrapped_text_centered
 )
 
+
+
+
+def get_resource_path(filename):
+    """Get the full path to a resource file"""
+    import os
+    from pathlib import Path
+    
+    # Try package data directory first
+    module_dir = Path(__file__).parent
+    resource = module_dir / filename
+    if resource.exists():
+        return str(resource)
+    
+    # Try system data directory
+    system_data = Path('/usr/share/nowplaying-sdl') / filename
+    if system_data.exists():
+        return str(system_data)
+    
+    # Fallback to module directory
+    return str(module_dir / filename)
 
 def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, screen_width=0, screen_height=0):
     """Render album cover art or placeholder
@@ -92,7 +114,8 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
         album_icon = "album"
         # Use a larger font size for the icon - scale with cover size
         icon_size = int(size * 0.4)  # 40% of cover size
-        font_icons_large = sdlttf.TTF_OpenFont(b"/home/matuschd/nowplaying-sdl/MaterialIcons-Regular.ttf", icon_size)
+        font_path = get_resource_path('fonts/MaterialIcons-Regular.ttf')
+        font_icons_large = sdlttf.TTF_OpenFont(font_path.encode('utf-8'), icon_size)
         if font_icons_large:
             render_text_centered(renderer, font_icons_large, album_icon, 
                                x + size // 2, y + size // 2, 200, 200, 200, rotation, screen_width, screen_height)
@@ -241,7 +264,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     
     # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
     if minimal_buttons:
-        font_icons_buttons = sdlttf.TTF_OpenFont(b"/home/matuschd/nowplaying-sdl/MaterialIcons-Regular.ttf", int(48 * 1.5))
+        font_icons_buttons = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), int(48 * 1.5))
     else:
         font_icons_buttons = font_icons
     
@@ -363,7 +386,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     
     # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
     if minimal_buttons:
-        font_icons_buttons = sdlttf.TTF_OpenFont(b"/home/matuschd/nowplaying-sdl/MaterialIcons-Regular.ttf", int(48 * 1.5))
+        font_icons_buttons = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), int(48 * 1.5))
     else:
         font_icons_buttons = font_icons
     
@@ -544,7 +567,8 @@ def main():
         font_large = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
         font_medium = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 42)
         font_small = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
-        font_icons = sdlttf.TTF_OpenFont(b"/home/matuschd/nowplaying-sdl/MaterialSymbolsRounded.ttf", 48)
+        font_icons_path = get_resource_path('fonts/MaterialSymbolsRounded.ttf')
+        font_icons = sdlttf.TTF_OpenFont(font_icons_path.encode('utf-8'), 48)
         
         if not font_large or not font_medium or not font_small or not font_icons:
             print(f"Error loading fonts: {sdlttf.TTF_GetError()}")

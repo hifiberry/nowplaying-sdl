@@ -1,0 +1,4 @@
+include nowplaying_sdl/fonts/*.ttf
+include nowplaying_sdl/*.jpg
+include LICENSE
+include README.md
