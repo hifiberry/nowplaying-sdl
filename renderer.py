@@ -137,10 +137,6 @@ def render_text(renderer, font, text, x, y, r, g, b, rotation=0, screen_width=0,
             
             print(f"render_text: text='{text[:20]}' layout pos=({x},{y}) screen center=({center_x},{center_y}) size={surface.contents.w}x{surface.contents.h} rect=({rect.x},{rect.y}) rotation={rotation}")
             
-            # Draw green bounding box for debugging
-            sdl2.SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255)
-            sdl2.SDL_RenderDrawRect(renderer, rect)
-            
             center = sdl2.SDL_Point(surface.contents.w // 2, surface.contents.h // 2)
             sdl2.SDL_RenderCopyEx(renderer, texture, None, rect, rotation, center, sdl2.SDL_FLIP_NONE)
         else:
@@ -194,10 +190,6 @@ def render_text_centered(renderer, font, text, center_x, center_y, r, g, b, rota
                                 surface.contents.w, surface.contents.h)
             
             print(f"render_text_centered: text='{text[:20]}' layout center=({center_x},{center_y}) screen center=({screen_center_x},{screen_center_y}) size={surface.contents.w}x{surface.contents.h} rect=({rect.x},{rect.y}) rotation={rotation}")
-            
-            # Draw green bounding box for debugging
-            sdl2.SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255)
-            sdl2.SDL_RenderDrawRect(renderer, rect)
             
             center = sdl2.SDL_Point(surface.contents.w // 2, surface.contents.h // 2)
             sdl2.SDL_RenderCopyEx(renderer, texture, None, rect, rotation, center, sdl2.SDL_FLIP_NONE)
