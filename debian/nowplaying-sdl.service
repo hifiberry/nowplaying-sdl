@@ -1,7 +1,7 @@
 [Unit]
 Description=HiFiBerry Now Playing Display
-After=graphical.target sound.target
-Wants=audiocontrol.service
+After=graphical.target sound.target audiocontrol.service
+Requires=audiocontrol.service
 
 [Service]
 Type=simple

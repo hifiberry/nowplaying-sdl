@@ -1,3 +1,24 @@
+nowplaying-sdl (0.2.1-1) unstable; urgency=medium
+
+  * Fixed systemd service to install as user service instead of system service
+  * Added dependency on audiocontrol.service in systemd unit
+  * Added postinst script for proper user service enablement
+
+ -- HiFiBerry <info@hifiberry.com>  Mon, 02 Dec 2024 15:00:00 +0000
+
+nowplaying-sdl (0.2.0-1) unstable; urgency=medium
+
+  * Added AudioControl API integration for live now-playing data
+  * Implemented cover art download and caching system
+  * Added configuration file support (/etc or ~/.config)
+  * Added systemd user service for automatic startup
+  * Added --demo mode for testing without API
+  * Fixed cover art display with proper field name mapping
+  * Improved background polling with thread-based updates
+  * Removed debug code and print statements
+
+ -- HiFiBerry <info@hifiberry.com>  Mon, 02 Dec 2024 14:00:00 +0000
+
 nowplaying-sdl (0.1.0-1) unstable; urgency=medium
 
   * Initial release

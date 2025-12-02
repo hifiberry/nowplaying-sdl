@@ -15,7 +15,7 @@ with support for rotation and touch controls.
 
 setup(
     name='nowplaying-sdl',
-    version='0.1.0',
+    version='0.2.0',
     description='SDL2-based now playing display for music players',
     long_description=long_description,
     long_description_content_type='text/markdown',

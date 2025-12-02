@@ -1,1 +1,2 @@
 nowplaying_sdl.conf /usr/share/nowplaying-sdl/
+nowplaying-sdl.service /usr/lib/systemd/user/

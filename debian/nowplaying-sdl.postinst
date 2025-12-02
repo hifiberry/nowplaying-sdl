@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+# Get the actual user running the system (not root)
+ACTUAL_USER="${SUDO_USER:-$USER}"
+
+if [ "$ACTUAL_USER" != "root" ] && [ -n "$ACTUAL_USER" ]; then
+    # Enable and start the user service for the actual user
+    if [ -d "/home/$ACTUAL_USER" ]; then
+        # Get the user's UID for systemctl --user
+        USER_UID=$(id -u "$ACTUAL_USER")
+        
+        # Enable the user service
+        su - "$ACTUAL_USER" -c "systemctl --user enable nowplaying-sdl.service" || true
+        
+        # Try to start it if the user session is active
+        su - "$ACTUAL_USER" -c "systemctl --user start nowplaying-sdl.service" 2>/dev/null || true
+        
+        echo "User service nowplaying-sdl.service has been enabled for user $ACTUAL_USER"
+        echo "To start it manually: systemctl --user start nowplaying-sdl.service"
+        echo "To check status: systemctl --user status nowplaying-sdl.service"
+    fi
+fi
+
+#DEBHELPER#
+
+exit 0
