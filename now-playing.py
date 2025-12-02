@@ -109,10 +109,10 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     # Draw album cover placeholder (dark gray square)
     draw_rounded_rect(renderer, cover_x, cover_y, cover_size, cover_size, 20, 100, 100, 100, 255, rotation, screen_width, screen_height)
     
-    # Draw music note symbol in center of cover
-    note_text = "♪"
-    render_text(renderer, font_large, note_text, 
-                cover_x + cover_size // 2 - 30, cover_y + cover_size // 2 - 40, 200, 200, 200, rotation, screen_width, screen_height)
+    # Draw album icon in center of cover
+    album_icon = "album"
+    render_text_centered(renderer, font_icons, album_icon, 
+                cover_x + cover_size // 2, cover_y + cover_size // 2, 200, 200, 200, rotation, screen_width, screen_height)
     
     # Right side content area
     content_x = cover_x + cover_size + padding * 2
