@@ -118,13 +118,14 @@ def render_text(renderer, font, text, x, y, r, g, b, rotation=0, screen_width=0,
                 
                 # Map from layout coords to screen coords
                 # Layout is 1280x720, screen is 720x1280
+                # For 90° clockwise: layout (x,y) -> screen (screen_width-y, x)
                 # layout_x in [0, 1280] -> screen_y in [0, 1280]
-                # layout_y in [0, 720] -> screen_x in [0, 720]
+                # layout_y in [0, 720] -> screen_x in [720, 0] (inverted)
                 if rotation == 90:
-                    center_x = layout_center_y
+                    center_x = screen_width - layout_center_y
                     center_y = layout_center_x
                 else:  # 270
-                    center_x = screen_width - layout_center_y
+                    center_x = layout_center_y
                     center_y = screen_height - layout_center_x
             else:
                 center_x = x + surface.contents.w // 2
@@ -175,13 +176,14 @@ def render_text_centered(renderer, font, text, center_x, center_y, r, g, b, rota
             # Map from layout coords to screen coords
             if rotation in (90, 270):
                 # Layout is 1280x720, screen is 720x1280
+                # For 90° clockwise: layout (x,y) -> screen (screen_width-y, x)
                 # layout_x in [0, 1280] -> screen_y in [0, 1280]
-                # layout_y in [0, 720] -> screen_x in [0, 720]
+                # layout_y in [0, 720] -> screen_x in [720, 0] (inverted)
                 if rotation == 90:
-                    screen_center_x = center_y
+                    screen_center_x = screen_width - center_y
                     screen_center_y = center_x
                 else:  # 270
-                    screen_center_x = screen_width - center_y
+                    screen_center_x = center_y
                     screen_center_y = screen_height - center_x
             else:
                 screen_center_x = center_x
