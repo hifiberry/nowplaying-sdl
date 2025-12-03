@@ -884,8 +884,10 @@ def main():
         args.rotation = config.get_int('rotation')
     if args.api_url is None:
         args.api_url = config.get('api_url')
-    if not args.portrait and not args.landscape and not args.circle:
-        if config.get_bool('circle'):
+    if not args.portrait and not args.landscape and not args.circle and not args.circle2:
+        if config.get_bool('circle2'):
+            args.circle2 = True
+        elif config.get_bool('circle'):
             args.circle = True
         elif config.get_bool('portrait'):
             args.portrait = True
