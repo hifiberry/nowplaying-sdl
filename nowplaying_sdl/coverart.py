@@ -7,8 +7,11 @@ import os
 import urllib.request
 import hashlib
 import tempfile
+import logging
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 class CoverArtCache:
@@ -52,14 +55,19 @@ class CoverArtCache:
             Path to local file, or None if unavailable
         """
         if not url:
+            logger.debug("No cover URL provided")
             return None
+        
+        logger.debug(f"Getting cover art for URL: {url}")
         
         # Check if already cached
         cache_path = self._get_cache_path(url)
         if cache_path.exists():
+            logger.info(f"Cover art found in cache: {cache_path}")
             return str(cache_path)
         
         # Download the image
+        logger.info(f"Downloading cover art from: {url}")
         try:
             request = urllib.request.Request(
                 url,
@@ -68,15 +76,17 @@ class CoverArtCache:
             
             with urllib.request.urlopen(request, timeout=10) as response:
                 data = response.read()
+                logger.debug(f"Downloaded {len(data)} bytes")
                 
                 # Save to cache
                 with open(cache_path, 'wb') as f:
                     f.write(data)
                 
+                logger.info(f"Cover art cached to: {cache_path}")
                 return str(cache_path)
                 
         except Exception as e:
-            print(f"Error downloading cover art from {url}: {e}")
+            logger.error(f"Error downloading cover art from {url}: {e}")
             return None
     
     def clear_cache(self):
@@ -85,5 +95,6 @@ class CoverArtCache:
             import shutil
             shutil.rmtree(self.cache_dir)
             self.cache_dir.mkdir(parents=True, exist_ok=True)
+            logger.info("Cover art cache cleared")
         except Exception as e:
-            print(f"Error clearing cache: {e}")
+            logger.error(f"Error clearing cache: {e}")

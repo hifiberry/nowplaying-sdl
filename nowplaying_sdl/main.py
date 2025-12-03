@@ -10,6 +10,7 @@ import sdl2.sdlimage as sdlimage
 import sys
 import argparse
 import os
+import logging
 from pathlib import Path
 from .audiocontrol import AudioControlClient
 from .config import Config
@@ -23,6 +24,8 @@ from .renderer import (
     truncate_text,
     render_wrapped_text_centered
 )
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -180,6 +183,11 @@ def parse_arguments():
         type=str,
         help='AudioControl API URL (default: http://localhost:1080/api, overrides config file)'
     )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Enable debug logging'
+    )
     return parser.parse_args()
 
 
@@ -188,7 +196,7 @@ def get_display_info(display_index):
     mode = sdl2.SDL_DisplayMode()
     
     if sdl2.SDL_GetDesktopDisplayMode(display_index, mode) != 0:
-        print(f"Error getting display mode: {sdl2.SDL_GetError()}")
+        logger.error(f"Error getting display mode: {sdl2.SDL_GetError()}")
         return None
     
     return mode
@@ -230,7 +238,9 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     elif now_playing_data:
         # Get cover art (download if needed)
         cover_url = now_playing_data.get('cover_url')
+        logger.debug(f"Landscape layout - cover_url from API: {cover_url}")
         cover_file = cover_cache.get_cover(cover_url) if cover_cache and cover_url else None
+        logger.debug(f"Landscape layout - cover_file resolved: {cover_file}")
         title = now_playing_data.get('title', '')
         artist = now_playing_data.get('artist', '')
     else:
@@ -386,7 +396,9 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     elif now_playing_data:
         # Get cover art (download if needed)
         cover_url = now_playing_data.get('cover_url')
+        logger.debug(f"Portrait layout - cover_url from API: {cover_url}")
         cover_file = cover_cache.get_cover(cover_url) if cover_cache and cover_url else None
+        logger.debug(f"Portrait layout - cover_file resolved: {cover_file}")
         title = now_playing_data.get('title', '')
         artist = now_playing_data.get('artist', '')
     else:
@@ -668,6 +680,16 @@ def main():
     """Main application entry point"""
     args = parse_arguments()
     
+    # Configure logging
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    logger.info(f"Starting nowplaying-sdl (log level: {'DEBUG' if args.debug else 'INFO'})")
+    
     # Load configuration
     config = Config(args.config if hasattr(args, 'config') else None)
     
@@ -699,19 +721,19 @@ def main():
     
     # Initialize SDL
     if sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO) != 0:
-        print(f"Error initializing SDL: {sdl2.SDL_GetError()}")
+        logger.error(f"Error initializing SDL: {sdl2.SDL_GetError()}")
         return 1
     
     # Initialize SDL_ttf
     if sdlttf.TTF_Init() != 0:
-        print(f"Error initializing SDL_ttf: {sdlttf.TTF_GetError()}")
+        logger.error(f"Error initializing SDL_ttf: {sdlttf.TTF_GetError()}")
         sdl2.SDL_Quit()
         return 1
     
     # Initialize SDL_image
     img_flags = sdlimage.IMG_INIT_JPG | sdlimage.IMG_INIT_PNG
     if sdlimage.IMG_Init(img_flags) != img_flags:
-        print(f"Error initializing SDL_image: {sdlimage.IMG_GetError()}")
+        logger.error(f"Error initializing SDL_image: {sdlimage.IMG_GetError()}")
         sdlttf.TTF_Quit()
         sdl2.SDL_Quit()
         return 1
@@ -721,12 +743,12 @@ def main():
         num_displays = sdl2.SDL_GetNumVideoDisplays()
         
         if num_displays < 1:
-            print(f"Error: No displays found: {sdl2.SDL_GetError()}")
+            logger.error(f"Error: No displays found: {sdl2.SDL_GetError()}")
             return 1
         
         # Validate display index
         if args.display < 0 or args.display >= num_displays:
-            print(f"Error: Display {args.display} not found. Available displays: 0-{num_displays-1}")
+            logger.error(f"Error: Display {args.display} not found. Available displays: 0-{num_displays-1}")
             return 1
         
         # Get display information
@@ -762,8 +784,8 @@ def main():
             if base_is_portrait != screen_is_portrait:
                 screen_orientation = "portrait" if screen_is_portrait else "landscape"
                 desired_orientation = "portrait" if base_is_portrait else "landscape"
-                print(f"Error: Screen is {screen_orientation} ({display_mode.w}x{display_mode.h}) but {desired_orientation} mode was requested.")
-                print(f"Please use --{'portrait' if screen_is_portrait else 'landscape'} or allow auto-detection.")
+                logger.error(f"Error: Screen is {screen_orientation} ({display_mode.w}x{display_mode.h}) but {desired_orientation} mode was requested.")
+                logger.error(f"Please use --{'portrait' if screen_is_portrait else 'landscape'} or allow auto-detection.")
                 return 1
             
             # Apply rotation: 90° and 270° flip the orientation for rendering
@@ -772,12 +794,12 @@ def main():
                 is_portrait = not is_portrait
                 orientation_str += f" + rotated {args.rotation}°"
         
-        print(f"Using display {args.display}: {display_mode.w}x{display_mode.h} @ {display_mode.refresh_rate}Hz ({orientation_str})")
+        logger.info(f"Using display {args.display}: {display_mode.w}x{display_mode.h} @ {display_mode.refresh_rate}Hz ({orientation_str})")
         
         # Get display bounds to position window on correct display
         bounds = sdl2.SDL_Rect()
         if sdl2.SDL_GetDisplayBounds(args.display, bounds) != 0:
-            print(f"Error getting display bounds: {sdl2.SDL_GetError()}")
+            logger.error(f"Error getting display bounds: {sdl2.SDL_GetError()}")
             return 1
         
         # Create window on the specified display
@@ -791,7 +813,7 @@ def main():
         )
         
         if not window:
-            print(f"Error creating window: {sdl2.SDL_GetError()}")
+            logger.error(f"Error creating window: {sdl2.SDL_GetError()}")
             return 1
         
         # Create renderer
@@ -802,7 +824,7 @@ def main():
         )
         
         if not renderer:
-            print(f"Error creating renderer: {sdl2.SDL_GetError()}")
+            logger.error(f"Error creating renderer: {sdl2.SDL_GetError()}")
             sdl2.SDL_DestroyWindow(window)
             return 1
         
@@ -814,17 +836,18 @@ def main():
         font_icons = sdlttf.TTF_OpenFont(font_icons_path.encode('utf-8'), 48)
         
         if not font_large or not font_medium or not font_small or not font_icons:
-            print(f"Error loading fonts: {sdlttf.TTF_GetError()}")
+            logger.error(f"Error loading fonts: {sdlttf.TTF_GetError()}")
         
         # Initialize AudioControl client if not in demo mode
         ac_client = None
         if not args.demo:
             ac_client = AudioControlClient(api_url=args.api_url, update_interval=1.0)
             ac_client.start()
-            print(f"Connecting to AudioControl API: {args.api_url}")
+            logger.info(f"Connecting to AudioControl API: {args.api_url}")
         
         # Initialize cover art cache
         cover_cache = CoverArtCache()
+        logger.info(f"Cover art cache initialized at: {cover_cache.cache_dir}")
         
         # Main loop
         running = True
@@ -843,6 +866,8 @@ def main():
         
         # Get now playing data
         now_playing_data = ac_client.get_current_data() if ac_client else None
+        if now_playing_data:
+            logger.debug(f"Initial now playing data: {now_playing_data}")
         
         button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
@@ -875,20 +900,20 @@ def main():
                     touch_y = int(event.tfinger.y * display_mode.h)
                     button = check_button_hit(touch_x, touch_y)
                     if button:
-                        print(f"Button pressed: {button}")
+                        logger.info(f"Button pressed: {button}")
                         # Toggle liked state when like button is pressed
                         if button == 'like':
                             liked_state[0] = not liked_state[0]
-                            print(f"Liked: {liked_state[0]}")
+                            logger.info(f"Liked: {liked_state[0]}")
                 elif event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                     # Mouse coordinates are in pixels
                     button = check_button_hit(event.button.x, event.button.y)
                     if button:
-                        print(f"Button pressed: {button}")
+                        logger.info(f"Button pressed: {button}")
                         # Toggle liked state when like button is pressed
                         if button == 'like':
                             liked_state[0] = not liked_state[0]
-                            print(f"Liked: {liked_state[0]}")
+                            logger.info(f"Liked: {liked_state[0]}")
             
             # Clear renderer
             sdl2.SDL_RenderClear(renderer)

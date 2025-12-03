@@ -9,7 +9,10 @@ import urllib.request
 import urllib.error
 import time
 import threading
+import logging
 from typing import Optional, Dict, Any
+
+logger = logging.getLogger(__name__)
 
 
 class AudioControlClient:
@@ -34,6 +37,7 @@ class AudioControlClient:
         """Fetch the current now playing information from the AudioControl API"""
         try:
             url = f"{self.api_url}/now-playing"
+            logger.debug(f"Fetching now playing from: {url}")
             
             request = urllib.request.Request(
                 url,
@@ -43,6 +47,7 @@ class AudioControlClient:
             with urllib.request.urlopen(request, timeout=5) as response:
                 data = response.read().decode('utf-8')
                 result = json.loads(data)
+                logger.debug(f"API response: {result}")
                 
                 # Also fetch player information
                 try:
@@ -54,23 +59,28 @@ class AudioControlClient:
                     with urllib.request.urlopen(player_request, timeout=5) as player_response:
                         player_data = json.loads(player_response.read().decode('utf-8'))
                         result["player_info"] = player_data
-                except Exception:
-                    pass
+                        logger.debug(f"Player info: {player_data}")
+                except Exception as e:
+                    logger.debug(f"Could not fetch player info: {e}")
                 
                 self.error = None
                 return result
                 
         except urllib.error.HTTPError as e:
             self.error = f"HTTP Error: {e.code} {e.reason}"
+            logger.error(self.error)
             return {"error": self.error}
         except urllib.error.URLError as e:
             self.error = f"Connection Error: {e.reason}"
+            logger.error(self.error)
             return {"error": self.error}
         except json.JSONDecodeError as e:
             self.error = f"Invalid JSON response"
+            logger.error(f"{self.error}: {e}")
             return {"error": self.error}
         except Exception as e:
             self.error = f"Error: {str(e)}"
+            logger.error(self.error)
             return {"error": self.error}
     
     def format_now_playing(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -102,6 +112,8 @@ class AudioControlClient:
         
         # Get cover art URL if available (try multiple field names)
         cover_url = song.get("cover_art_url") or song.get("coverUrl") or song.get("artUrl")
+        
+        logger.debug(f"Formatted data - title: {song.get('title', '')}, artist: {song.get('artist', '')}, cover_url: {cover_url}")
         
         return {
             "artist": song.get("artist", ""),

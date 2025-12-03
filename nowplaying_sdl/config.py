@@ -5,8 +5,11 @@ Configuration file handler for nowplaying-sdl
 
 import os
 import configparser
+import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -47,7 +50,7 @@ class Config:
             if os.path.exists(config_file):
                 return config_file
             else:
-                print(f"Warning: Config file {config_file} not found")
+                logger.warning(f"Config file {config_file} not found")
                 return None
         
         # Check if running as root
@@ -76,9 +79,9 @@ class Config:
         if self.config_file:
             try:
                 config.read(self.config_file)
-                print(f"Loaded config from: {self.config_file}")
+                logger.info(f"Loaded config from: {self.config_file}")
             except Exception as e:
-                print(f"Error reading config file {self.config_file}: {e}")
+                logger.error(f"Error reading config file {self.config_file}: {e}")
         
         return config
     
