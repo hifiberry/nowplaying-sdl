@@ -111,7 +111,7 @@ class AudioControlClient:
                     break
         
         # Get cover art URL if available (try multiple field names)
-        cover_url = song.get("cover_art_url") or song.get("coverUrl") or song.get("artUrl")
+        cover_url = song.get("coverart_url") or song.get("cover_art_url") or song.get("coverUrl") or song.get("artUrl")
         
         logger.debug(f"Formatted data - title: {song.get('title', '')}, artist: {song.get('artist', '')}, cover_url: {cover_url}")
         
