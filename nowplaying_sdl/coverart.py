@@ -63,7 +63,7 @@ class CoverArtCache:
         # Check if already cached
         cache_path = self._get_cache_path(url)
         if cache_path.exists():
-            logger.info(f"Cover art found in cache: {cache_path}")
+            logger.debug(f"Cover art found in cache: {cache_path}")
             return str(cache_path)
         
         # Download the image
