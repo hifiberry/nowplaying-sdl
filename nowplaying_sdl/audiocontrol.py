@@ -100,7 +100,10 @@ class AudioControlClient:
                 "error": data["error"]
             }
         
-        song = data.get("song", {})
+        song = data.get("song")
+        if song is None:
+            song = {}
+        
         state = data.get("state", "unknown")
         player_name = None
         
