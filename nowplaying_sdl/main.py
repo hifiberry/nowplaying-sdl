@@ -734,8 +734,37 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     render_coverart(renderer, cover_x, cover_y, cover_size, cover_file, font_icons, rotation, screen_width, screen_height)
     
     # Load smaller fonts (20% smaller: 48->38, 42->34) - using Noto Sans for better Unicode support
-    font_large_small = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf", 38)
-    font_medium_small = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf", 34)
+    # Try multiple font paths for better compatibility
+    font_paths_bold = [
+        b"/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
+        b"/usr/share/fonts/truetype/noto/NotoSans_Condensed-Bold.ttf",
+        b"/usr/share/fonts/noto/NotoSans-Bold.ttf",
+        b"/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    ]
+    font_paths_regular = [
+        b"/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        b"/usr/share/fonts/truetype/noto/NotoSans_Condensed-Regular.ttf",
+        b"/usr/share/fonts/noto/NotoSans-Regular.ttf",
+        b"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    ]
+    
+    font_large_small = None
+    for path in font_paths_bold:
+        try:
+            font_large_small = sdlttf.TTF_OpenFont(path, 38)
+            if font_large_small:
+                break
+        except:
+            continue
+    
+    font_medium_small = None
+    for path in font_paths_regular:
+        try:
+            font_medium_small = sdlttf.TTF_OpenFont(path, 34)
+            if font_medium_small:
+                break
+        except:
+            continue
     
     # Song title below the cover - wrap to 70% of diameter
     max_text_width = int(diameter * 0.7)
@@ -1014,10 +1043,48 @@ def main():
             sdl2.SDL_DestroyWindow(window)
             return 1
         
-        # Load fonts
-        font_large = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf", 48)
-        font_medium = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf", 42)
-        font_small = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf", 24)
+        # Load fonts - try multiple paths for better Unicode support
+        font_paths_bold = [
+            b"/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
+            b"/usr/share/fonts/truetype/noto/NotoSans_Condensed-Bold.ttf",
+            b"/usr/share/fonts/noto/NotoSans-Bold.ttf",
+            b"/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        ]
+        font_paths_regular = [
+            b"/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+            b"/usr/share/fonts/truetype/noto/NotoSans_Condensed-Regular.ttf",
+            b"/usr/share/fonts/noto/NotoSans-Regular.ttf",
+            b"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        ]
+        
+        font_large = None
+        for path in font_paths_bold:
+            try:
+                font_large = sdlttf.TTF_OpenFont(path, 48)
+                if font_large:
+                    logger.info(f"Loaded bold font from: {path.decode('utf-8')}")
+                    break
+            except:
+                continue
+        
+        font_medium = None
+        for path in font_paths_regular:
+            try:
+                font_medium = sdlttf.TTF_OpenFont(path, 42)
+                if font_medium:
+                    logger.info(f"Loaded medium font from: {path.decode('utf-8')}")
+                    break
+            except:
+                continue
+        
+        font_small = None
+        for path in font_paths_regular:
+            try:
+                font_small = sdlttf.TTF_OpenFont(path, 24)
+                if font_small:
+                    break
+            except:
+                continue
         font_icons_path = get_resource_path('fonts/MaterialSymbolsRounded.ttf')
         font_icons = sdlttf.TTF_OpenFont(font_icons_path.encode('utf-8'), 48)
         

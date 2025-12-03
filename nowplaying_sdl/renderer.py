@@ -141,7 +141,7 @@ def render_text(renderer, font, text, x, y, r, g, b, rotation=0, screen_width=0,
         screen_width, screen_height: Screen dimensions (required for rotation)
     """
     color = sdl2.SDL_Color(r, g, b, 255)
-    surface = sdlttf.TTF_RenderText_Blended(font, text.encode('utf-8'), color)
+    surface = sdlttf.TTF_RenderUTF8_Blended(font, text.encode('utf-8'), color)
     if not surface:
         return
     
@@ -206,7 +206,7 @@ def render_text_centered(renderer, font, text, center_x, center_y, r, g, b, rota
         screen_width, screen_height: Screen dimensions (required for rotation)
     """
     color = sdl2.SDL_Color(r, g, b, 255)
-    surface = sdlttf.TTF_RenderText_Blended(font, text.encode('utf-8'), color)
+    surface = sdlttf.TTF_RenderUTF8_Blended(font, text.encode('utf-8'), color)
     if not surface:
         return
     
