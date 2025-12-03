@@ -18,7 +18,7 @@ Depends: ${python3:Depends},
          libsdl2-2.0-0,
          libsdl2-ttf-2.0-0,
          libsdl2-image-2.0-0,
-         fonts-dejavu-core,
+         fonts-noto-core,
          systemd
 Description: SDL2-based now playing display for music players
  A simple SDL2-based display for showing currently playing music
