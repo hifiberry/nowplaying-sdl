@@ -708,7 +708,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     
     # Calculate layout elements within the circle
     padding = int(diameter * 0.05)  # 5% of diameter
-    cover_size = int(diameter * 0.48)  # 48% of diameter for cover (20% larger than 40%)
+    cover_size = int(diameter * 0.52)  # 52% of diameter for cover (30% larger than 40%)
     cover_x = circle_center_x - cover_size // 2
     cover_y = circle_center_y - int(diameter * 0.37)  # Move cover 2% up
     
@@ -733,18 +733,18 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     # Render album cover at the top
     render_coverart(renderer, cover_x, cover_y, cover_size, cover_file, font_icons, rotation, screen_width, screen_height)
     
-    # Load smaller fonts (20% smaller: 48->38, 42->34)
-    font_large_small = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 38)
-    font_medium_small = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 34)
+    # Load smaller fonts (20% smaller: 48->38, 42->34) - using Noto Sans for better Unicode support
+    font_large_small = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf", 38)
+    font_medium_small = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf", 34)
     
     # Song title below the cover - wrap to 70% of diameter
     max_text_width = int(diameter * 0.7)
     wrapped_title = wrap_text(font_large_small, title, max_text_width)
-    if len(wrapped_title) > 2:
-        # Truncate to 2 lines with ellipsis
-        wrapped_title = wrapped_title[:2]
-        if len(wrapped_title[1]) > 0:
-            wrapped_title[1] = wrapped_title[1][:-3] + "..." if len(wrapped_title[1]) > 3 else wrapped_title[1] + "..."
+    if len(wrapped_title) > 1:
+        # Truncate to 1 line with ellipsis
+        wrapped_title = wrapped_title[:1]
+        if len(wrapped_title[0]) > 0:
+            wrapped_title[0] = wrapped_title[0][:-3] + "..." if len(wrapped_title[0]) > 3 else wrapped_title[0] + "..."
     
     # Move text down to account for larger cover
     text_offset = int(diameter * 0.09)  # 9% down (increased from 5% for larger cover)
@@ -1015,9 +1015,9 @@ def main():
             return 1
         
         # Load fonts
-        font_large = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
-        font_medium = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 42)
-        font_small = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
+        font_large = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf", 48)
+        font_medium = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf", 42)
+        font_small = sdlttf.TTF_OpenFont(b"/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf", 24)
         font_icons_path = get_resource_path('fonts/MaterialSymbolsRounded.ttf')
         font_icons = sdlttf.TTF_OpenFont(font_icons_path.encode('utf-8'), 48)
         
