@@ -32,6 +32,8 @@ class AudioControlClient:
         self.running = False
         self.thread = None
         self.error = None
+        self.previous_song = None
+        self.previous_state = None
         
     def fetch_now_playing(self) -> Dict[str, Any]:
         """Fetch the current now playing information from the AudioControl API"""
@@ -113,12 +115,23 @@ class AudioControlClient:
         # Get cover art URL if available (try multiple field names)
         cover_url = song.get("coverart_url") or song.get("cover_art_url") or song.get("coverUrl") or song.get("artUrl")
         
-        logger.debug(f"Formatted data - title: {song.get('title', '')}, artist: {song.get('artist', '')}, cover_url: {cover_url}")
+        # Clear data if stopped or paused
+        if state.lower() in ["stopped", "paused"]:
+            artist = ""
+            title = ""
+            album = ""
+            cover_url = None
+        else:
+            artist = song.get("artist", "")
+            title = song.get("title", "")
+            album = song.get("album", "")
+        
+        logger.debug(f"Formatted data - title: {title}, artist: {artist}, cover_url: {cover_url}")
         
         return {
-            "artist": song.get("artist", ""),
-            "title": song.get("title", ""),
-            "album": song.get("album", ""),
+            "artist": artist,
+            "title": title,
+            "album": album,
             "cover_url": cover_url,
             "state": state,
             "position": data.get("position"),
@@ -134,7 +147,21 @@ class AudioControlClient:
         """Background thread that polls for updates"""
         while self.running:
             raw_data = self.fetch_now_playing()
-            self.current_data = self.format_now_playing(raw_data)
+            new_data = self.format_now_playing(raw_data)
+            
+            # Check for changes
+            current_song = (new_data.get('title'), new_data.get('artist'))
+            current_state = new_data.get('state')
+            
+            if current_song != self.previous_song and current_song != ('', ''):
+                logger.info(f"Now playing: {new_data.get('artist')} - {new_data.get('title')}")
+                self.previous_song = current_song
+            
+            if current_state != self.previous_state:
+                logger.info(f"Playback state changed: {self.previous_state} -> {current_state}")
+                self.previous_state = current_state
+            
+            self.current_data = new_data
             time.sleep(self.update_interval)
     
     def start(self):
