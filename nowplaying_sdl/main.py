@@ -184,6 +184,12 @@ def parse_arguments():
         help='AudioControl API URL (default: http://localhost:1080/api, overrides config file)'
     )
     parser.add_argument(
+        '--poll-interval',
+        type=float,
+        default=2.0,
+        help='Poll interval in seconds for API updates (default: 2.0)'
+    )
+    parser.add_argument(
         '--debug',
         action='store_true',
         help='Enable debug logging'
@@ -841,9 +847,9 @@ def main():
         # Initialize AudioControl client if not in demo mode
         ac_client = None
         if not args.demo:
-            ac_client = AudioControlClient(api_url=args.api_url, update_interval=1.0)
+            ac_client = AudioControlClient(api_url=args.api_url, update_interval=args.poll_interval)
             ac_client.start()
-            logger.info(f"Connecting to AudioControl API: {args.api_url}")
+            logger.info(f"Connecting to AudioControl API: {args.api_url} (poll interval: {args.poll_interval}s)")
         
         # Initialize cover art cache
         cover_cache = CoverArtCache()
