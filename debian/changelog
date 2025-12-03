@@ -1,3 +1,19 @@
+nowplaying-sdl (0.3.0-1) unstable; urgency=medium
+
+  * Added circular layout mode for circular displays
+  * New --circle command-line argument
+  * Circle mode uses circular area based on minimum screen dimension
+  * All UI elements (cover, title, artist, buttons) fit within circular area
+
+ -- HiFiBerry <info@hifiberry.com>  Mon, 02 Dec 2024 16:00:00 +0000
+
+nowplaying-sdl (0.2.2-1) unstable; urgency=medium
+
+  * Removed system service dependency (user services cannot depend on system services)
+  * Application handles audiocontrol connection automatically with retry logic
+
+ -- HiFiBerry <info@hifiberry.com>  Mon, 02 Dec 2024 15:30:00 +0000
+
 nowplaying-sdl (0.2.1-1) unstable; urgency=medium
 
   * Fixed systemd service to install as user service instead of system service

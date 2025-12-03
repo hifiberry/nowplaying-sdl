@@ -1,7 +1,8 @@
 [Unit]
 Description=HiFiBerry Now Playing Display
-After=graphical.target sound.target audiocontrol.service
-Requires=audiocontrol.service
+After=graphical.target sound.target
+# Note: Cannot use Requires= for system service from user service
+# The application will retry connection to audiocontrol API automatically
 
 [Service]
 Type=simple

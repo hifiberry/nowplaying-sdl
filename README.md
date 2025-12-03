@@ -9,7 +9,7 @@ SDL2-based now playing display for music players.
 - Touch-friendly button controls
 - Album cover art display
 - Material Design icons
-- Multiple display modes (portrait/landscape)
+- Multiple display modes (portrait/landscape/circle)
 - Customizable button layouts
 
 ## Installation
@@ -48,6 +48,10 @@ A default configuration file is installed to `/usr/share/nowplaying-sdl/nowplayi
 display = 0
 rotation = 90
 api_url = http://localhost:1080/api
+# Orientation/Layout mode (use one or neither for auto-detect)
+# portrait = false
+# landscape = false
+# circle = false
 bw_buttons = false
 no_control = false
 minimal_buttons = false
@@ -85,6 +89,9 @@ nowplaying-sdl --portrait
 
 # Landscape mode
 nowplaying-sdl --landscape
+
+# Circle mode (circular layout for round displays)
+nowplaying-sdl --circle
 
 # Minimal buttons (no background)
 nowplaying-sdl --minimal-buttons
