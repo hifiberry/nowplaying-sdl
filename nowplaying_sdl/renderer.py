@@ -37,6 +37,44 @@ def transform_coordinates(x, y, width, height, screen_width, screen_height, rota
     return result
 
 
+def draw_circle(renderer, center_x, center_y, radius, r, g, b, a, thickness=1):
+    """Draw a circle outline using Bresenham's circle algorithm
+    
+    Args:
+        renderer: SDL2 renderer
+        center_x, center_y: Center position
+        radius: Circle radius
+        r, g, b, a: Color components
+        thickness: Line thickness (1 for thin line)
+    """
+    sdl2.SDL_SetRenderDrawColor(renderer, r, g, b, a)
+    
+    # Draw circle using midpoint circle algorithm
+    for t in range(thickness):
+        r_current = radius + t
+        x = r_current
+        y = 0
+        decision = 1 - x
+        
+        while x >= y:
+            # Draw 8 octants
+            sdl2.SDL_RenderDrawPoint(renderer, center_x + x, center_y + y)
+            sdl2.SDL_RenderDrawPoint(renderer, center_x + y, center_y + x)
+            sdl2.SDL_RenderDrawPoint(renderer, center_x - y, center_y + x)
+            sdl2.SDL_RenderDrawPoint(renderer, center_x - x, center_y + y)
+            sdl2.SDL_RenderDrawPoint(renderer, center_x - x, center_y - y)
+            sdl2.SDL_RenderDrawPoint(renderer, center_x - y, center_y - x)
+            sdl2.SDL_RenderDrawPoint(renderer, center_x + y, center_y - x)
+            sdl2.SDL_RenderDrawPoint(renderer, center_x + x, center_y - y)
+            
+            y += 1
+            if decision <= 0:
+                decision += 2 * y + 1
+            else:
+                x -= 1
+                decision += 2 * (y - x) + 1
+
+
 def draw_rounded_rect(renderer, x, y, w, h, radius, r, g, b, a, rotation=0, screen_width=0, screen_height=0):
     """Draw a filled rounded rectangle with optional rotation
     

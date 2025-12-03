@@ -15,6 +15,7 @@ from .audiocontrol import AudioControlClient
 from .config import Config
 from .coverart import CoverArtCache
 from .renderer import (
+    draw_circle,
     draw_rounded_rect,
     render_text,
     render_text_centered,
@@ -137,6 +138,11 @@ def parse_arguments():
         '--landscape',
         action='store_true',
         help='Force landscape orientation (overrides config file)'
+    )
+    orientation_group.add_argument(
+        '--circle',
+        action='store_true',
+        help='Use circular layout mode (overrides config file)'
     )
     parser.add_argument(
         '--bw-buttons',
@@ -485,12 +491,174 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     return button_rects
 
 
-def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None):
-    """Draw the Now Playing UI based on orientation
+def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None):
+    """Draw the Now Playing UI in circular layout mode
+    
+    Args:
+        width, height: Layout dimensions (may be swapped for rotation)
+        screen_width, screen_height: Physical screen dimensions
+        demo: If True, use demo data; if False, use now_playing_data
+        now_playing_data: Dict with artist, title, album, cover_url from AudioControl
+        cover_cache: CoverArtCache instance for downloading cover art
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
-    if is_portrait:
+    
+    # Clear screen to light gray background
+    sdl2.SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255)
+    sdl2.SDL_RenderClear(renderer)
+    
+    # Calculate circular layout - diameter is the smaller dimension of physical screen
+    # For circle mode, always use physical screen dimensions
+    physical_diameter = min(screen_width, screen_height)
+    physical_center_x = screen_width // 2
+    physical_center_y = screen_height // 2
+    
+    # Draw circle outline with diameter width+2px (radius = diameter/2 + 1) on physical screen
+    circle_radius = physical_diameter // 2 + 1
+    draw_circle(renderer, physical_center_x, physical_center_y, circle_radius, 0, 0, 0, 255, thickness=2)
+    
+    # For layout calculations, use layout dimensions
+    diameter = min(width, height)
+    circle_center_x = width // 2
+    circle_center_y = height // 2
+    
+    # Calculate layout elements within the circle
+    padding = int(diameter * 0.05)  # 5% of diameter
+    cover_size = int(diameter * 0.4)  # 40% of diameter for cover
+    cover_x = circle_center_x - cover_size // 2
+    cover_y = circle_center_y - int(diameter * 0.37)  # Move cover 2% up (was 0.35, now 0.37)
+    
+    button_rects = {}
+    
+    # Determine data source
+    if demo:
+        cover_file = get_resource_path("demo_cover.jpg")
+        title = "Never Gonna Give You Up"
+        artist = "Rick Astley"
+    elif now_playing_data:
+        # Get cover art (download if needed)
+        cover_url = now_playing_data.get('cover_url')
+        cover_file = cover_cache.get_cover(cover_url) if cover_cache and cover_url else None
+        title = now_playing_data.get('title', '')
+        artist = now_playing_data.get('artist', '')
+    else:
+        cover_file = None
+        title = ""
+        artist = ""
+    
+    # Render album cover at the top
+    render_coverart(renderer, cover_x, cover_y, cover_size, cover_file, font_icons, rotation, screen_width, screen_height)
+    
+    # Song title below the cover - wrap to 70% of diameter
+    max_text_width = int(diameter * 0.7)
+    wrapped_title = wrap_text(font_large, title, max_text_width)
+    if len(wrapped_title) > 2:
+        # Truncate to 2 lines with ellipsis
+        wrapped_title = wrapped_title[:2]
+        if len(wrapped_title[1]) > 0:
+            wrapped_title[1] = wrapped_title[1][:-3] + "..." if len(wrapped_title[1]) > 3 else wrapped_title[1] + "..."
+    
+    # Move text 5% down
+    text_offset = int(diameter * 0.05)
+    title_y = cover_y + cover_size + 20 + text_offset  # Below the cover + 5% offset
+    for i, line in enumerate(wrapped_title):
+        render_text_centered(renderer, font_large, line, circle_center_x, title_y + i * 60, 30, 30, 30, rotation, screen_width, screen_height)
+    
+    # Artist name below title
+    wrapped_artist = wrap_text(font_medium, artist, max_text_width)
+    if len(wrapped_artist) > 1:
+        wrapped_artist = wrapped_artist[:1]  # Only one line for artist
+        if len(wrapped_artist[0]) > 0:
+            wrapped_artist[0] = wrapped_artist[0][:-3] + "..." if len(wrapped_artist[0]) > 3 else wrapped_artist[0] + "..."
+    
+    artist_y = title_y + 65 + (len(wrapped_title) - 1) * 60  # Below title
+    for i, line in enumerate(wrapped_artist):
+        render_text_centered(renderer, font_medium, line, circle_center_x, artist_y + i * 50, 100, 100, 100, rotation, screen_width, screen_height)
+    
+    # Control buttons at the bottom of the circle
+    button_size = int(diameter * 0.12)  # 12% of diameter
+    button_spacing = int(diameter * 0.03)  # 3% of diameter
+    button_y = circle_center_y + int(diameter * 0.32)  # Move buttons 3% up (was 0.35, now 0.32)
+    
+    # Colors
+    prev_color = (200, 200, 200) if bw_buttons else (100, 149, 237)
+    play_color = (80, 80, 80) if bw_buttons else (50, 205, 50)
+    next_color = (200, 200, 200) if bw_buttons else (100, 149, 237)
+    like_color = (150, 150, 150) if bw_buttons else (255, 105, 180)
+    
+    # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
+    if minimal_buttons:
+        font_icons_buttons = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), int(button_size * 0.6))
+    else:
+        font_icons_buttons = font_icons
+    
+    if no_control:
+        # Only show like button, centered (filled if liked, border if not)
+        like_icon = "favorite" if liked else "favorite_border"
+        like_x = circle_center_x - button_size // 2
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, int(button_size * 0.35), *like_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
+        button_rects['like'] = (like_x, button_y, button_size, button_size)
+    else:
+        # Calculate button positions to center them
+        total_buttons_width = button_size * 4 + button_spacing * 3
+        buttons_start_x = circle_center_x - total_buttons_width // 2
+        
+        # Previous button (skip_previous icon)
+        prev_x = buttons_start_x
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, int(button_size * 0.35), *prev_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, *prev_color, rotation, screen_width, screen_height)
+        button_rects['prev'] = (prev_x, button_y, button_size, button_size)
+        
+        # Play/Pause button (play_arrow icon)
+        play_x = prev_x + button_size + button_spacing
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, int(button_size * 0.35), *play_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, *play_color, rotation, screen_width, screen_height)
+        button_rects['play'] = (play_x, button_y, button_size, button_size)
+        
+        # Next button (skip_next icon)
+        next_x = play_x + button_size + button_spacing
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, int(button_size * 0.35), *next_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, *next_color, rotation, screen_width, screen_height)
+        button_rects['next'] = (next_x, button_y, button_size, button_size)
+        
+        # Like button (favorite icon - filled if liked, border if not)
+        like_icon = "favorite" if liked else "favorite_border"
+        like_x = next_x + button_size + button_spacing
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, int(button_size * 0.35), *like_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
+        button_rects['like'] = (like_x, button_y, button_size, button_size)
+    
+    if minimal_buttons and font_icons_buttons != font_icons:
+        sdlttf.TTF_CloseFont(font_icons_buttons)
+    
+    return button_rects
+
+
+def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, is_circle=False):
+    """Draw the Now Playing UI based on orientation or mode
+    
+    Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
+    """
+    if is_circle:
+        return draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache)
+    elif is_portrait:
         return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache)
     else:
         return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache)
@@ -511,8 +679,10 @@ def main():
         args.rotation = config.get_int('rotation')
     if args.api_url is None:
         args.api_url = config.get('api_url')
-    if not args.portrait and not args.landscape:
-        if config.get_bool('portrait'):
+    if not args.portrait and not args.landscape and not args.circle:
+        if config.get_bool('circle'):
+            args.circle = True
+        elif config.get_bool('portrait'):
             args.portrait = True
         elif config.get_bool('landscape'):
             args.landscape = True
@@ -567,31 +737,40 @@ def main():
         # Determine orientation
         screen_is_portrait = display_mode.h > display_mode.w
         
-        # Determine base orientation (before rotation)
-        if args.portrait:
-            base_is_portrait = True
-            orientation_str = "portrait (forced)"
-        elif args.landscape:
+        # Determine display mode (circle, portrait, or landscape)
+        is_circle = args.circle if hasattr(args, 'circle') else False
+        
+        if is_circle:
+            # Circle mode: orientation validation doesn't apply
+            orientation_str = "circle mode"
+            is_portrait = False  # Not used in circle mode, but set for consistency
             base_is_portrait = False
-            orientation_str = "landscape (forced)"
         else:
-            # Auto-detect based on display resolution
-            base_is_portrait = screen_is_portrait
-            orientation_str = "portrait (auto)" if base_is_portrait else "landscape (auto)"
-        
-        # Validate base orientation matches screen (before rotation)
-        if base_is_portrait != screen_is_portrait:
-            screen_orientation = "portrait" if screen_is_portrait else "landscape"
-            desired_orientation = "portrait" if base_is_portrait else "landscape"
-            print(f"Error: Screen is {screen_orientation} ({display_mode.w}x{display_mode.h}) but {desired_orientation} mode was requested.")
-            print(f"Please use --{'portrait' if screen_is_portrait else 'landscape'} or allow auto-detection.")
-            return 1
-        
-        # Apply rotation: 90° and 270° flip the orientation for rendering
-        is_portrait = base_is_portrait
-        if args.rotation in (90, 270):
-            is_portrait = not is_portrait
-            orientation_str += f" + rotated {args.rotation}°"
+            # Determine base orientation (before rotation)
+            if args.portrait:
+                base_is_portrait = True
+                orientation_str = "portrait (forced)"
+            elif args.landscape:
+                base_is_portrait = False
+                orientation_str = "landscape (forced)"
+            else:
+                # Auto-detect based on display resolution
+                base_is_portrait = screen_is_portrait
+                orientation_str = "portrait (auto)" if base_is_portrait else "landscape (auto)"
+            
+            # Validate base orientation matches screen (before rotation)
+            if base_is_portrait != screen_is_portrait:
+                screen_orientation = "portrait" if screen_is_portrait else "landscape"
+                desired_orientation = "portrait" if base_is_portrait else "landscape"
+                print(f"Error: Screen is {screen_orientation} ({display_mode.w}x{display_mode.h}) but {desired_orientation} mode was requested.")
+                print(f"Please use --{'portrait' if screen_is_portrait else 'landscape'} or allow auto-detection.")
+                return 1
+            
+            # Apply rotation: 90° and 270° flip the orientation for rendering
+            is_portrait = base_is_portrait
+            if args.rotation in (90, 270):
+                is_portrait = not is_portrait
+                orientation_str += f" + rotated {args.rotation}°"
         
         print(f"Using display {args.display}: {display_mode.w}x{display_mode.h} @ {display_mode.refresh_rate}Hz ({orientation_str})")
         
@@ -668,7 +847,7 @@ def main():
         button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
                           args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache)]
+                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle)]
         sdl2.SDL_RenderPresent(renderer)
         
         def check_button_hit(x, y):
@@ -721,7 +900,7 @@ def main():
             button_rects[0] = draw_now_playing_ui(renderer, layout_width, layout_height, 
                               font_large, font_medium, font_small, font_icons, is_portrait, 
                               args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache)
+                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle)
             
             # Present the rendered frame
             sdl2.SDL_RenderPresent(renderer)
