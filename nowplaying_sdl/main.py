@@ -747,7 +747,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
             wrapped_title[0] = wrapped_title[0][:-3] + "..." if len(wrapped_title[0]) > 3 else wrapped_title[0] + "..."
     
     # Move text down to account for larger cover
-    text_offset = int(diameter * 0.09)  # 9% down (increased from 5% for larger cover)
+    text_offset = int(diameter * 0.06)  # 6% down (reduced from 9% to shift text up)
     title_y = cover_y + cover_size + 20 + text_offset  # Below the cover + offset
     for i, line in enumerate(wrapped_title):
         render_text_centered(renderer, font_large_small, line, circle_center_x, title_y + i * 48, 30, 30, 30, rotation, screen_width, screen_height)
