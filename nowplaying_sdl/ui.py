@@ -114,6 +114,168 @@ def get_button_icon_font(minimal_buttons, font_icons, size_multiplier=1.5):
         return font_icons, False
 
 
+def wrap_and_truncate_text(font, text, max_width, max_lines):
+    """Wrap text and truncate to max lines with ellipsis
+    
+    Args:
+        font: TTF font to use for text measurement
+        text: Text to wrap
+        max_width: Maximum width in pixels
+        max_lines: Maximum number of lines
+    
+    Returns:
+        List of text lines (truncated with ellipsis if needed)
+    """
+    wrapped = wrap_text(font, text, max_width)
+    if len(wrapped) > max_lines:
+        wrapped = wrapped[:max_lines]
+        if len(wrapped[-1]) > 3:
+            wrapped[-1] = wrapped[-1][:-3] + "..."
+        elif len(wrapped[-1]) > 0:
+            wrapped[-1] = wrapped[-1] + "..."
+    return wrapped
+
+
+def setup_circle_layout(screen_width, screen_height, width, height):
+    """Setup circle layout dimensions and draw outline
+    
+    Args:
+        screen_width, screen_height: Physical screen dimensions
+        width, height: Layout dimensions
+    
+    Returns:
+        Tuple of (physical_diameter, physical_center_x, physical_center_y, diameter, circle_center_x, circle_center_y)
+    """
+    physical_diameter = min(screen_width, screen_height)
+    physical_center_x = screen_width // 2
+    physical_center_y = screen_height // 2
+    
+    diameter = min(width, height)
+    circle_center_x = width // 2
+    circle_center_y = height // 2
+    
+    return physical_diameter, physical_center_x, physical_center_y, diameter, circle_center_x, circle_center_y
+
+
+def draw_circle_outline(renderer, physical_center_x, physical_center_y, physical_diameter):
+    """Draw circle outline on physical screen
+    
+    Args:
+        renderer: SDL2 renderer
+        physical_center_x, physical_center_y: Center coordinates on physical screen
+        physical_diameter: Diameter of the circle
+    """
+    circle_radius = physical_diameter // 2 + 1
+    draw_circle(renderer, physical_center_x, physical_center_y, circle_radius, 0, 0, 0, 255, thickness=2)
+
+
+def render_control_buttons(renderer, button_y, button_size, button_spacing, center_x, total_width,
+                          prev_color, play_color, next_color, like_color,
+                          font_icons_buttons, minimal_buttons, liked, no_control,
+                          rotation, screen_width, screen_height, border_radius=35):
+    """Render control buttons (prev, play, next, like)
+    
+    Args:
+        renderer: SDL2 renderer
+        button_y: Y position for buttons
+        button_size: Size of each button
+        button_spacing: Spacing between buttons
+        center_x: Center X position for button group
+        total_width: Total width available (used for centering)
+        prev_color, play_color, next_color, like_color: Button colors
+        font_icons_buttons: Icon font to use
+        minimal_buttons: If True, render minimal style (no background)
+        liked: If True, show filled heart icon
+        no_control: If True, only show like button
+        rotation: Screen rotation angle
+        screen_width, screen_height: Physical screen dimensions
+        border_radius: Border radius for button backgrounds (default 35)
+    
+    Returns:
+        Dict of button rectangles: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
+    """
+    button_rects = {}
+    
+    if no_control:
+        # Only show like button, centered
+        like_icon = "favorite" if liked else "favorite_border"
+        like_x = center_x - button_size // 2
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, border_radius, 
+                            *like_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, like_icon, 
+                               like_x + button_size // 2, button_y + button_size // 2, 
+                               255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, like_icon, 
+                               like_x + button_size // 2, button_y + button_size // 2, 
+                               *like_color, rotation, screen_width, screen_height)
+        button_rects['like'] = (like_x, button_y, button_size, button_size)
+    else:
+        # Calculate button positions to center them
+        total_buttons_width = button_size * 4 + button_spacing * 3
+        buttons_start_x = center_x - total_buttons_width // 2
+        
+        # Previous button
+        prev_x = buttons_start_x
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, border_radius, 
+                            *prev_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, "skip_previous", 
+                               prev_x + button_size // 2, button_y + button_size // 2, 
+                               255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "skip_previous", 
+                               prev_x + button_size // 2, button_y + button_size // 2, 
+                               *prev_color, rotation, screen_width, screen_height)
+        button_rects['prev'] = (prev_x, button_y, button_size, button_size)
+        
+        # Play/Pause button
+        play_x = prev_x + button_size + button_spacing
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, border_radius, 
+                            *play_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, "play_arrow", 
+                               play_x + button_size // 2, button_y + button_size // 2, 
+                               255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "play_arrow", 
+                               play_x + button_size // 2, button_y + button_size // 2, 
+                               *play_color, rotation, screen_width, screen_height)
+        button_rects['play'] = (play_x, button_y, button_size, button_size)
+        
+        # Next button
+        next_x = play_x + button_size + button_spacing
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, border_radius, 
+                            *next_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, "skip_next", 
+                               next_x + button_size // 2, button_y + button_size // 2, 
+                               255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "skip_next", 
+                               next_x + button_size // 2, button_y + button_size // 2, 
+                               *next_color, rotation, screen_width, screen_height)
+        button_rects['next'] = (next_x, button_y, button_size, button_size)
+        
+        # Like button
+        like_icon = "favorite" if liked else "favorite_border"
+        like_x = next_x + button_size + button_spacing
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, border_radius, 
+                            *like_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, like_icon, 
+                               like_x + button_size // 2, button_y + button_size // 2, 
+                               255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, like_icon, 
+                               like_x + button_size // 2, button_y + button_size // 2, 
+                               *like_color, rotation, screen_width, screen_height)
+        button_rects['like'] = (like_x, button_y, button_size, button_size)
+    
+    return button_rects
+
+
 def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, screen_width=0, screen_height=0):
     """Render album cover art or placeholder
     
@@ -239,57 +401,13 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     # Load icon font for buttons
     font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, 1.5)
     
-    if no_control:
-        # Only show like button, centered (filled if liked, border if not)
-        like_icon = "favorite" if liked else "favorite_border"
-        like_x = (width - button_size) // 2
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 35, *like_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
-        button_rects['like'] = (like_x, button_y, button_size, button_size)
-    else:
-        # Calculate button positions to center them
-        total_buttons_width = button_size * 4 + button_spacing * 3
-        buttons_start_x = (width - total_buttons_width) // 2
-        
-        # Previous button (skip_previous icon)
-        prev_x = buttons_start_x
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, 35, *prev_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, *prev_color, rotation, screen_width, screen_height)
-        button_rects['prev'] = (prev_x, button_y, button_size, button_size)
-        
-        # Play/Pause button (play_arrow icon)
-        play_x = prev_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, 35, *play_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, *play_color, rotation, screen_width, screen_height)
-        button_rects['play'] = (play_x, button_y, button_size, button_size)
-        
-        # Next button (skip_next icon)
-        next_x = play_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, 35, *next_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, *next_color, rotation, screen_width, screen_height)
-        button_rects['next'] = (next_x, button_y, button_size, button_size)
-        
-        # Like button (favorite icon - filled if liked, border if not)
-        like_icon = "favorite" if liked else "favorite_border"
-        like_x = next_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 35, *like_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
-        button_rects['like'] = (like_x, button_y, button_size, button_size)
+    # Render control buttons
+    button_rects = render_control_buttons(
+        renderer, button_y, button_size, button_spacing, center_x, width,
+        prev_color, play_color, next_color, like_color,
+        font_icons_buttons, minimal_buttons, liked, no_control,
+        rotation, screen_width, screen_height, border_radius=35
+    )
     
     if needs_font_cleanup:
         sdlttf.TTF_CloseFont(font_icons_buttons)
@@ -339,23 +457,14 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     
     # Song title (centered) - wrap to max 40% display width
     max_text_width = int(width * 0.4)
-    wrapped_title = wrap_text(font_large, title, max_text_width)
-    if len(wrapped_title) > 2:
-        # Truncate to 2 lines with ellipsis
-        wrapped_title = wrapped_title[:2]
-        if len(wrapped_title[1]) > 0:
-            wrapped_title[1] = wrapped_title[1][:-3] + "..." if len(wrapped_title[1]) > 3 else wrapped_title[1] + "..."
+    wrapped_title = wrap_and_truncate_text(font_large, title, max_text_width, 2)
     
     title_y = content_y + 28 + int(height * TEXT_VERTICAL_OFFSET_PERCENT)
     for i, line in enumerate(wrapped_title):
         render_text_centered(renderer, font_large, line, content_center_x, title_y + i * 60, 30, 30, 30, rotation, screen_width, screen_height)
     
     # Artist name (centered) - wrap to max 40% display width
-    wrapped_artist = wrap_text(font_medium, artist, max_text_width)
-    if len(wrapped_artist) > 2:
-        wrapped_artist = wrapped_artist[:2]
-        if len(wrapped_artist[1]) > 0:
-            wrapped_artist[1] = wrapped_artist[1][:-3] + "..." if len(wrapped_artist[1]) > 3 else wrapped_artist[1] + "..."
+    wrapped_artist = wrap_and_truncate_text(font_medium, artist, max_text_width, 2)
     
     artist_y = content_y + 105 + (len(wrapped_title) - 1) * 60 + int(height * TEXT_VERTICAL_OFFSET_PERCENT)
     for i, line in enumerate(wrapped_artist):
@@ -372,57 +481,13 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     # Load icon font for buttons
     font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, 1.5)
     
-    if no_control:
-        # Only show like button, centered (filled if liked, border if not)
-        like_icon = "favorite" if liked else "favorite_border"
-        like_x = content_x + (content_width - button_size) // 2
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 40, *like_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
-        button_rects['like'] = (like_x, button_y, button_size, button_size)
-    else:
-        # Calculate button positions to center them
-        total_buttons_width = button_size * 4 + button_spacing * 3
-        buttons_start_x = content_x + (content_width - total_buttons_width) // 2
-        
-        # Previous button (skip_previous icon)
-        prev_x = buttons_start_x
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, 40, *prev_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, *prev_color, rotation, screen_width, screen_height)
-        button_rects['prev'] = (prev_x, button_y, button_size, button_size)
-        
-        # Play/Pause button (play_arrow icon)
-        play_x = prev_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, 40, *play_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, *play_color, rotation, screen_width, screen_height)
-        button_rects['play'] = (play_x, button_y, button_size, button_size)
-        
-        # Next button (skip_next icon)
-        next_x = play_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, 40, *next_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, *next_color, rotation, screen_width, screen_height)
-        button_rects['next'] = (next_x, button_y, button_size, button_size)
-        
-        # Like button (favorite icon - filled if liked, border if not)
-        like_icon = "favorite" if liked else "favorite_border"
-        like_x = next_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, 40, *like_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
-        button_rects['like'] = (like_x, button_y, button_size, button_size)
+    # Render control buttons
+    button_rects = render_control_buttons(
+        renderer, button_y, button_size, button_spacing, content_center_x, content_width,
+        prev_color, play_color, next_color, like_color,
+        font_icons_buttons, minimal_buttons, liked, no_control,
+        rotation, screen_width, screen_height, border_radius=40
+    )
     
     if needs_font_cleanup:
         sdlttf.TTF_CloseFont(font_icons_buttons)
@@ -447,20 +512,12 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
     sdl2.SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255)
     sdl2.SDL_RenderClear(renderer)
     
-    # Calculate circular layout - diameter is the smaller dimension of physical screen
-    # For circle mode, always use physical screen dimensions
-    physical_diameter = min(screen_width, screen_height)
-    physical_center_x = screen_width // 2
-    physical_center_y = screen_height // 2
+    # Setup circle layout
+    physical_diameter, physical_center_x, physical_center_y, diameter, circle_center_x, circle_center_y = \
+        setup_circle_layout(screen_width, screen_height, width, height)
     
-    # Draw circle outline with diameter width+2px (radius = diameter/2 + 1) on physical screen
-    circle_radius = physical_diameter // 2 + 1
-    draw_circle(renderer, physical_center_x, physical_center_y, circle_radius, 0, 0, 0, 255, thickness=2)
-    
-    # For layout calculations, use layout dimensions
-    diameter = min(width, height)
-    circle_center_x = width // 2
-    circle_center_y = height // 2
+    # Draw circle outline
+    draw_circle_outline(renderer, physical_center_x, physical_center_y, physical_diameter)
     
     # Calculate layout elements within the circle
     padding = int(diameter * 0.05)  # 5% of diameter
@@ -478,12 +535,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
     
     # Song title below the cover - wrap to 70% of diameter
     max_text_width = int(diameter * 0.7)
-    wrapped_title = wrap_text(font_large, title, max_text_width)
-    if len(wrapped_title) > 2:
-        # Truncate to 2 lines with ellipsis
-        wrapped_title = wrapped_title[:2]
-        if len(wrapped_title[1]) > 0:
-            wrapped_title[1] = wrapped_title[1][:-3] + "..." if len(wrapped_title[1]) > 3 else wrapped_title[1] + "..."
+    wrapped_title = wrap_and_truncate_text(font_large, title, max_text_width, 2)
     
     # Move text 5% down
     text_offset = int(diameter * 0.05)
@@ -492,11 +544,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
         render_text_centered(renderer, font_large, line, circle_center_x, title_y + i * 60, 30, 30, 30, rotation, screen_width, screen_height)
     
     # Artist name below title
-    wrapped_artist = wrap_text(font_medium, artist, max_text_width)
-    if len(wrapped_artist) > 1:
-        wrapped_artist = wrapped_artist[:1]  # Only one line for artist
-        if len(wrapped_artist[0]) > 0:
-            wrapped_artist[0] = wrapped_artist[0][:-3] + "..." if len(wrapped_artist[0]) > 3 else wrapped_artist[0] + "..."
+    wrapped_artist = wrap_and_truncate_text(font_medium, artist, max_text_width, 1)
     
     artist_y = title_y + 65 + (len(wrapped_title) - 1) * 60  # Below title
     for i, line in enumerate(wrapped_artist):
@@ -513,57 +561,13 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
     # Load icon font for buttons
     font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, button_size * 0.6)
     
-    if no_control:
-        # Only show like button, centered (filled if liked, border if not)
-        like_icon = "favorite" if liked else "favorite_border"
-        like_x = circle_center_x - button_size // 2
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, int(button_size * 0.35), *like_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
-        button_rects['like'] = (like_x, button_y, button_size, button_size)
-    else:
-        # Calculate button positions to center them
-        total_buttons_width = button_size * 4 + button_spacing * 3
-        buttons_start_x = circle_center_x - total_buttons_width // 2
-        
-        # Previous button (skip_previous icon)
-        prev_x = buttons_start_x
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, int(button_size * 0.35), *prev_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, *prev_color, rotation, screen_width, screen_height)
-        button_rects['prev'] = (prev_x, button_y, button_size, button_size)
-        
-        # Play/Pause button (play_arrow icon)
-        play_x = prev_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, int(button_size * 0.35), *play_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, *play_color, rotation, screen_width, screen_height)
-        button_rects['play'] = (play_x, button_y, button_size, button_size)
-        
-        # Next button (skip_next icon)
-        next_x = play_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, int(button_size * 0.35), *next_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, *next_color, rotation, screen_width, screen_height)
-        button_rects['next'] = (next_x, button_y, button_size, button_size)
-        
-        # Like button (favorite icon - filled if liked, border if not)
-        like_icon = "favorite" if liked else "favorite_border"
-        like_x = next_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, int(button_size * 0.35), *like_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
-        button_rects['like'] = (like_x, button_y, button_size, button_size)
+    # Render control buttons
+    button_rects = render_control_buttons(
+        renderer, button_y, button_size, button_spacing, circle_center_x, diameter,
+        prev_color, play_color, next_color, like_color,
+        font_icons_buttons, minimal_buttons, liked, no_control,
+        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35)
+    )
     
     if needs_font_cleanup:
         sdlttf.TTF_CloseFont(font_icons_buttons)
@@ -588,20 +592,12 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     sdl2.SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255)
     sdl2.SDL_RenderClear(renderer)
     
-    # Calculate circular layout - diameter is the smaller dimension of physical screen
-    # For circle mode, always use physical screen dimensions
-    physical_diameter = min(screen_width, screen_height)
-    physical_center_x = screen_width // 2
-    physical_center_y = screen_height // 2
+    # Setup circle layout
+    physical_diameter, physical_center_x, physical_center_y, diameter, circle_center_x, circle_center_y = \
+        setup_circle_layout(screen_width, screen_height, width, height)
     
-    # Draw circle outline with diameter width+2px (radius = diameter/2 + 1) on physical screen
-    circle_radius = physical_diameter // 2 + 1
-    draw_circle(renderer, physical_center_x, physical_center_y, circle_radius, 0, 0, 0, 255, thickness=2)
-    
-    # For layout calculations, use layout dimensions
-    diameter = min(width, height)
-    circle_center_x = width // 2
-    circle_center_y = height // 2
+    # Draw circle outline
+    draw_circle_outline(renderer, physical_center_x, physical_center_y, physical_diameter)
     
     # Calculate layout elements within the circle
     padding = int(diameter * 0.05)  # 5% of diameter
@@ -652,12 +648,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     
     # Song title below the cover - wrap to 70% of diameter
     max_text_width = int(diameter * 0.7)
-    wrapped_title = wrap_text(font_large_small, title, max_text_width)
-    if len(wrapped_title) > 1:
-        # Truncate to 1 line with ellipsis
-        wrapped_title = wrapped_title[:1]
-        if len(wrapped_title[0]) > 0:
-            wrapped_title[0] = wrapped_title[0][:-3] + "..." if len(wrapped_title[0]) > 3 else wrapped_title[0] + "..."
+    wrapped_title = wrap_and_truncate_text(font_large_small, title, max_text_width, 1)
     
     # Move text down to account for larger cover
     text_offset = int(diameter * 0.05)  # 5% down (reduced to shift text up)
@@ -666,11 +657,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
         render_text_centered(renderer, font_large_small, line, circle_center_x, title_y + i * 48, 30, 30, 30, rotation, screen_width, screen_height)
     
     # Artist name below title
-    wrapped_artist = wrap_text(font_medium_small, artist, max_text_width)
-    if len(wrapped_artist) > 1:
-        wrapped_artist = wrapped_artist[:1]  # Only one line for artist
-        if len(wrapped_artist[0]) > 0:
-            wrapped_artist[0] = wrapped_artist[0][:-3] + "..." if len(wrapped_artist[0]) > 3 else wrapped_artist[0] + "..."
+    wrapped_artist = wrap_and_truncate_text(font_medium_small, artist, max_text_width, 1)
     
     artist_y = title_y + 52 + (len(wrapped_title) - 1) * 48  # Below title
     for i, line in enumerate(wrapped_artist):
@@ -693,57 +680,13 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     # Load icon font for buttons
     font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, button_size * 0.6)
     
-    if no_control:
-        # Only show like button, centered
-        like_icon = "favorite" if liked else "favorite_border"
-        like_x = circle_center_x - button_size // 2
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, int(button_size * 0.35), *like_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
-        button_rects['like'] = (like_x, button_y, button_size, button_size)
-    else:
-        # Calculate button positions to center them
-        total_buttons_width = button_size * 4 + button_spacing * 3
-        buttons_start_x = circle_center_x - total_buttons_width // 2
-        
-        # Previous button
-        prev_x = buttons_start_x
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, int(button_size * 0.35), *prev_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "skip_previous", prev_x + button_size // 2, button_y + button_size // 2, *prev_color, rotation, screen_width, screen_height)
-        button_rects['prev'] = (prev_x, button_y, button_size, button_size)
-        
-        # Play/Pause button
-        play_x = prev_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, int(button_size * 0.35), *play_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "play_arrow", play_x + button_size // 2, button_y + button_size // 2, *play_color, rotation, screen_width, screen_height)
-        button_rects['play'] = (play_x, button_y, button_size, button_size)
-        
-        # Next button
-        next_x = play_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, int(button_size * 0.35), *next_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "skip_next", next_x + button_size // 2, button_y + button_size // 2, *next_color, rotation, screen_width, screen_height)
-        button_rects['next'] = (next_x, button_y, button_size, button_size)
-        
-        # Like button
-        like_icon = "favorite" if liked else "favorite_border"
-        like_x = next_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, int(button_size * 0.35), *like_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, 255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
-        button_rects['like'] = (like_x, button_y, button_size, button_size)
+    # Render control buttons
+    button_rects = render_control_buttons(
+        renderer, button_y, button_size, button_spacing, circle_center_x, diameter,
+        prev_color, play_color, next_color, like_color,
+        font_icons_buttons, minimal_buttons, liked, no_control,
+        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35)
+    )
     
     if needs_font_cleanup:
         sdlttf.TTF_CloseFont(font_icons_buttons)
