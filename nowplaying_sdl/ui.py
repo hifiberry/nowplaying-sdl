@@ -207,16 +207,19 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         if not hide_like_button:
             like_icon = "favorite" if liked else "favorite_border"
             like_x = center_x - button_size // 2
+            center_x_btn = like_x + button_size // 2
+            center_y_btn = button_y + button_size // 2
             logger.info(f"Rendering like button: icon={like_icon}, x={like_x}, y={button_y}, size={button_size}, minimal={minimal_buttons}, color={like_color}")
+            logger.info(f"Button center: ({center_x_btn}, {center_y_btn}), rotation={rotation}, screen={screen_width}x{screen_height}")
             if not minimal_buttons:
                 draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, border_radius, 
                                 *like_color, 255, rotation, screen_width, screen_height)
                 render_text_centered(renderer, font_icons_buttons, like_icon, 
-                                   like_x + button_size // 2, button_y + button_size // 2, 
+                                   center_x_btn, center_y_btn, 
                                    255, 255, 255, rotation, screen_width, screen_height)
             else:
                 render_text_centered(renderer, font_icons_buttons, like_icon, 
-                                   like_x + button_size // 2, button_y + button_size // 2, 
+                                   center_x_btn, center_y_btn, 
                                    *like_color, rotation, screen_width, screen_height)
             button_rects['like'] = (like_x, button_y, button_size, button_size)
     else:
