@@ -10,6 +10,7 @@ import sdl2.sdlttf as sdlttf
 from .renderer import (
     draw_circle,
     draw_rounded_rect,
+    draw_volume_slider,
     render_text_centered,
     truncate_text,
     wrap_text,
@@ -432,7 +433,7 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
             sdlttf.TTF_CloseFont(font_icons_large)
 
 
-def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics'):
+def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics', volume_slider=False, volume=50):
     """Draw the Now Playing UI in portrait orientation
     
     Args:
@@ -506,13 +507,26 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         rotation, screen_width, screen_height, border_radius=35, hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug, left_button=left_button
     )
     
+    # Draw volume slider if enabled
+    if volume_slider:
+        slider_width = int(width * 0.8)
+        slider_height = 30
+        slider_x = center_x - slider_width // 2
+        slider_y = button_y + button_size + 40  # 40px below buttons
+        slider_rect, handle_rect = draw_volume_slider(
+            renderer, slider_x, slider_y, slider_width, slider_height, volume,
+            rotation, screen_width, screen_height, debug
+        )
+        button_rects['volume_slider'] = slider_rect
+        button_rects['volume_handle'] = handle_rect
+    
     if needs_font_cleanup:
         sdlttf.TTF_CloseFont(font_icons_buttons)
     
     return button_rects
 
 
-def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics'):
+def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics', volume_slider=False, volume=50):
     """Draw the Now Playing UI in landscape orientation
     
     Args:
@@ -576,10 +590,21 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     for i, line in enumerate(wrapped_artist):
         render_text_centered(renderer, font_medium, line, content_center_x, artist_y + i * 50, 100, 100, 100, rotation, screen_width, screen_height)
     
-    # Control buttons area - align bottom of buttons with bottom of cover
+    # Control buttons area - position based on whether volume slider is shown
     button_size = 100
     button_spacing = 25
-    button_y = cover_y + cover_size - button_size + int(height * BUTTON_VERTICAL_OFFSET_PERCENT)
+    
+    # If volume slider is enabled, move buttons up to make room
+    if volume_slider:
+        # Calculate total height needed for buttons + slider
+        slider_height = 30
+        slider_spacing = 40  # Space between buttons and slider
+        total_controls_height = button_size + slider_spacing + slider_height
+        # Position buttons so the slider ends at the bottom of the cover
+        button_y = cover_y + cover_size - total_controls_height + int(height * BUTTON_VERTICAL_OFFSET_PERCENT)
+    else:
+        # Normal positioning - align bottom of buttons with bottom of cover
+        button_y = cover_y + cover_size - button_size + int(height * BUTTON_VERTICAL_OFFSET_PERCENT)
     
     # Get button colors
     prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
@@ -594,6 +619,21 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         font_icons_buttons, minimal_buttons, liked, no_control,
         rotation, screen_width, screen_height, border_radius=40, hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug, left_button=left_button
     )
+    
+    # Draw volume slider if enabled
+    if volume_slider:
+        slider_width = int(content_width * 0.8)
+        slider_x = content_center_x - slider_width // 2
+        # For rotation 90, increase spacing to move slider further down on rotated display
+        extra_spacing = 130 if rotation == 90 else 0
+        slider_y = button_y + button_size + slider_spacing + extra_spacing  # Below buttons with spacing
+        
+        slider_rect, handle_rect = draw_volume_slider(
+            renderer, slider_x, slider_y, slider_width, slider_height, volume,
+            rotation, screen_width, screen_height, debug
+        )
+        button_rects['volume_slider'] = slider_rect
+        button_rects['volume_handle'] = handle_rect
     
     if needs_font_cleanup:
         sdlttf.TTF_CloseFont(font_icons_buttons)

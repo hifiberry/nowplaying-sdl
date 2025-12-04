@@ -179,6 +179,11 @@ def parse_arguments():
         help='Show filled heart icon (default: unfilled border, overrides config file)'
     )
     parser.add_argument(
+        '--volume-slider',
+        action='store_true',
+        help='Show volume slider below buttons (portrait/landscape only, overrides config file)'
+    )
+    parser.add_argument(
         '--rotation',
         type=int,
         choices=[0, 90, 180, 270],
@@ -231,7 +236,7 @@ def get_display_info(display_index):
     return mode
 
 
-def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, is_circle=False, is_circle2=False, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics'):
+def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, is_circle=False, is_circle2=False, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics', volume_slider=False, volume=50):
     """Draw the Now Playing UI based on orientation or mode
     
     Args:
@@ -247,9 +252,9 @@ def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_s
     elif is_circle:
         return draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug, left_button)
     elif is_portrait:
-        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug, left_button)
+        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug, left_button, volume_slider, volume)
     else:
-        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug, left_button)
+        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug, left_button, volume_slider, volume)
 
 
 def main():
@@ -296,6 +301,8 @@ def main():
         args.liked = config.get_bool('liked')
     if not args.demo:
         args.demo = config.get_bool('demo')
+    if not args.volume_slider:
+        args.volume_slider = config.get_bool('volume_slider')
     
     # Initialize SDL
     if sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO) != 0:
@@ -490,13 +497,18 @@ def main():
         if now_playing_data and not args.demo:
             liked_state[0] = now_playing_data.get('is_favorite', False)
         
+        # Volume state (initial value 50%, will be updated from API if available)
+        volume_state = [50]
+        if now_playing_data and not args.demo:
+            volume_state[0] = now_playing_data.get('volume', 50)
+        
         # Check if favorites are supported (hide like button if not)
         hide_like = not args.demo and ac_client and ac_client.favorites_supported is False
         
         button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
                           args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug, args.left_button)]
+                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug, args.left_button, args.volume_slider, volume_state[0])]
         sdl2.SDL_RenderPresent(renderer)
         
         def check_button_hit(x, y):
@@ -618,6 +630,7 @@ def main():
             # Update liked state from API if not in demo mode
             if now_playing_data and not args.demo:
                 liked_state[0] = now_playing_data.get('is_favorite', False)
+                volume_state[0] = now_playing_data.get('volume', volume_state[0])
             
             # Check if favorites are supported (hide like button if not)
             hide_like = not args.demo and ac_client and ac_client.favorites_supported is False
@@ -626,7 +639,7 @@ def main():
             button_rects[0] = draw_now_playing_ui(renderer, layout_width, layout_height, 
                               font_large, font_medium, font_small, font_icons, is_portrait, 
                               args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug, args.left_button)
+                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug, args.left_button, args.volume_slider, volume_state[0])
             
             # Present the rendered frame
             sdl2.SDL_RenderPresent(renderer)

@@ -37,6 +37,105 @@ def transform_coordinates(x, y, width, height, screen_width, screen_height, rota
     return result
 
 
+def draw_volume_slider(renderer, x, y, width, height, volume, rotation=0, screen_width=0, screen_height=0, debug=False):
+    """Draw a volume slider
+    
+    Args:
+        renderer: SDL2 renderer
+        x, y: Position
+        width, height: Slider dimensions
+        volume: Current volume level (0-100)
+        rotation: Rotation angle in degrees (0, 90, 180, 270)
+        screen_width, screen_height: Screen dimensions (required for rotation)
+        debug: If True, draw bounding box and print position info
+        
+    Returns:
+        Tuple of (slider_rect, handle_rect) for hit detection
+    """
+    # Store original coordinates for return value
+    orig_x, orig_y, orig_width, orig_height = x, y, width, height
+    
+    # Transform coordinates based on rotation
+    # Match the pattern used in draw_rounded_rect
+    if rotation in (90, 270):
+        # For 90° and 270° rotations, swap element dimensions but NOT screen dimensions
+        tx, ty = transform_coordinates(x, y, height, width, screen_width, screen_height, rotation)
+        x, y, width, height = tx, ty, height, width
+    elif rotation == 180:
+        # For 180° rotation, transform coordinates only
+        tx, ty = transform_coordinates(x, y, width, height, screen_width, screen_height, rotation)
+        x, y = tx, ty
+    
+    # Draw horizontal slider bar (thin line)
+    # For rotated sliders, the bar should be centered on the narrow dimension
+    bar_thickness = 4
+    if rotation in (90, 270):
+        # After rotation, width is thin dimension, height is long dimension
+        bar_x = x + (width - bar_thickness) // 2
+        bar_y = y
+        bar_width = bar_thickness
+        bar_length = height
+    else:
+        # Normal orientation: horizontal bar
+        bar_x = x
+        bar_y = y + (height - bar_thickness) // 2
+        bar_width = width
+        bar_length = bar_thickness
+    
+    # Draw background bar (light gray)
+    sdl2.SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255)
+    bar_rect = sdl2.SDL_Rect(bar_x, bar_y, bar_width, bar_length)
+    sdl2.SDL_RenderFillRect(renderer, bar_rect)
+    
+    # Draw filled portion up to current volume (dark gray)
+    volume_clamped = max(0, min(100, volume))
+    if rotation in (90, 270):
+        fill_length = int(height * volume_clamped / 100)
+        fill_rect = sdl2.SDL_Rect(bar_x, bar_y, bar_width, fill_length)
+    else:
+        fill_width = int(width * volume_clamped / 100)
+        fill_rect = sdl2.SDL_Rect(bar_x, bar_y, fill_width, bar_length)
+    
+    sdl2.SDL_SetRenderDrawColor(renderer, 80, 80, 80, 255)  # Dark gray
+    sdl2.SDL_RenderFillRect(renderer, fill_rect)
+    
+    # Draw handle (large dot at current position)
+    handle_radius = 12  # Larger dot
+    if rotation in (90, 270):
+        handle_x = x + width // 2
+        handle_y = y + fill_length
+    else:
+        handle_x = x + fill_width
+        handle_y = y + height // 2
+    
+    # Draw handle (filled circle - dark gray)
+    draw_filled_circle(renderer, handle_x, handle_y, handle_radius, 80, 80, 80, 255)
+    
+    # Draw white border around handle
+    draw_circle(renderer, handle_x, handle_y, handle_radius, 255, 255, 255, 255, thickness=2)
+    
+    # Return rects for hit detection (in original coordinate system before rotation)
+    return (x, y, width, height), (handle_x - handle_radius, handle_y - handle_radius, handle_radius * 2, handle_radius * 2)
+
+
+def draw_filled_circle(renderer, center_x, center_y, radius, r, g, b, a):
+    """Draw a filled circle
+    
+    Args:
+        renderer: SDL2 renderer
+        center_x, center_y: Center position
+        radius: Circle radius
+        r, g, b, a: Color components
+    """
+    sdl2.SDL_SetRenderDrawColor(renderer, r, g, b, a)
+    
+    # Draw filled circle using midpoint algorithm
+    for y in range(-radius, radius + 1):
+        for x in range(-radius, radius + 1):
+            if x * x + y * y <= radius * radius:
+                sdl2.SDL_RenderDrawPoint(renderer, center_x + x, center_y + y)
+
+
 def draw_circle(renderer, center_x, center_y, radius, r, g, b, a, thickness=1):
     """Draw a circle outline using Bresenham's circle algorithm
     
