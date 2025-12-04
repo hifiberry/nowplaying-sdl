@@ -34,6 +34,9 @@ class AudioControlClient:
         self.error = None
         self.previous_song = None
         self.previous_state = None
+        self.favorites_supported = None  # None=unknown, True=supported, False=not supported
+        self.favorites_cache = None
+        self.favorites_cache_time = 0
         
     def fetch_now_playing(self) -> Dict[str, Any]:
         """Fetch the current now playing information from the AudioControl API"""
@@ -196,6 +199,15 @@ class AudioControlClient:
     
     def get_favorites(self) -> Optional[Dict[str, Any]]:
         """Get list of favorites from the API"""
+        # If we know favorites aren't supported, don't try
+        if self.favorites_supported is False:
+            return None
+        
+        # Use cache if fresh (within 2 seconds)
+        current_time = time.time()
+        if self.favorites_cache and (current_time - self.favorites_cache_time) < 2.0:
+            return self.favorites_cache
+        
         try:
             url = f"{self.api_url}/favourites"
             logger.debug(f"Fetching favorites from: {url}")
@@ -209,8 +221,22 @@ class AudioControlClient:
                 data = response.read().decode('utf-8')
                 result = json.loads(data)
                 logger.debug(f"Favorites response: {result}")
+                
+                # Mark as supported and cache result
+                self.favorites_supported = True
+                self.favorites_cache = result
+                self.favorites_cache_time = current_time
                 return result
                 
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                # Favorites endpoint not available
+                if self.favorites_supported is None:
+                    logger.info("Favorites API not available (404) - feature disabled")
+                self.favorites_supported = False
+            else:
+                logger.error(f"HTTP error fetching favorites: {e.code} {e.reason}")
+            return None
         except Exception as e:
             logger.error(f"Error fetching favorites: {e}")
             return None
@@ -225,6 +251,10 @@ class AudioControlClient:
         Returns:
             True if the track is in favorites, False otherwise
         """
+        # Return False if API not supported
+        if self.favorites_supported is False:
+            return False
+        
         if not title or not artist:
             return False
         
@@ -250,6 +280,10 @@ class AudioControlClient:
         Returns:
             True if successful, False otherwise
         """
+        # Return False if API not supported
+        if self.favorites_supported is False:
+            return False
+        
         if not title or not artist:
             logger.warning("Cannot add favorite: missing title or artist")
             return False
@@ -280,8 +314,19 @@ class AudioControlClient:
             
             with urllib.request.urlopen(request, timeout=5) as response:
                 logger.info(f"Added to favorites: {response.status}")
+                # Invalidate cache
+                self.favorites_cache = None
+                self.favorites_supported = True
                 return response.status == 200
                 
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                if self.favorites_supported is None:
+                    logger.info("Favorites API not available (404) - feature disabled")
+                self.favorites_supported = False
+            else:
+                logger.error(f"HTTP error adding to favorites: {e.code} {e.reason}")
+            return False
         except Exception as e:
             logger.error(f"Error adding to favorites: {e}")
             return False
@@ -296,6 +341,10 @@ class AudioControlClient:
         Returns:
             True if successful, False otherwise
         """
+        # Return False if API not supported
+        if self.favorites_supported is False:
+            return False
+        
         if not title or not artist:
             logger.warning("Cannot remove favorite: missing title or artist")
             return False
@@ -324,8 +373,19 @@ class AudioControlClient:
             
             with urllib.request.urlopen(request, timeout=5) as response:
                 logger.info(f"Removed from favorites: {response.status}")
+                # Invalidate cache
+                self.favorites_cache = None
+                self.favorites_supported = True
                 return response.status == 200
                 
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                if self.favorites_supported is None:
+                    logger.info("Favorites API not available (404) - feature disabled")
+                self.favorites_supported = False
+            else:
+                logger.error(f"HTTP error removing from favorites: {e.code} {e.reason}")
+            return False
         except Exception as e:
             logger.error(f"Error removing from favorites: {e}")
             return False
