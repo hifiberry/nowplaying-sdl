@@ -314,6 +314,9 @@ def render_text_centered(renderer, font, text, center_x, center_y, r, g, b, rota
         return
     
     texture = sdl2.SDL_CreateTextureFromSurface(renderer, surface)
+    if not texture:
+        error_msg = sdl2.SDL_GetError().decode('utf-8') if sdl2.SDL_GetError() else "Unknown error"
+        logger.warning(f"Failed to create texture for text '{text}': {error_msg}, surface size={surface.contents.w}x{surface.contents.h}")
     if texture:
         if rotation != 0:
             # Input center_x, center_y are in layout coordinates
