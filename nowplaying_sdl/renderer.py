@@ -348,9 +348,14 @@ def render_text_centered(renderer, font, text, center_x, center_y, r, g, b, rota
             x = center_x - surface.contents.w // 2
             y = center_y - surface.contents.h // 2
             rect = sdl2.SDL_Rect(x, y, surface.contents.w, surface.contents.h)
+            if text in ['favorite', 'favorite_border']:
+                logger.info(f"Drawing '{text}' texture at ({x}, {y}) size=({surface.contents.w}x{surface.contents.h})")
             sdl2.SDL_RenderCopy(renderer, texture, None, rect)
         
         sdl2.SDL_DestroyTexture(texture)
+    else:
+        if text in ['favorite', 'favorite_border']:
+            logger.warning(f"Failed to create texture for '{text}'")
     
     sdl2.SDL_FreeSurface(surface)
 
