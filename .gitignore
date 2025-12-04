@@ -12,3 +12,6 @@ debian/debhelper-build-stamp
 debian/files
 debian/*.log
 debian/*.substvars
+debian/nowplaying-sdl.postinst.debhelper
+debian/nowplaying-sdl.prerm.debhelper
+debian/nowplaying-sdl.postrm.debhelper
