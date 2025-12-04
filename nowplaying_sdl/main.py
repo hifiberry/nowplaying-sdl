@@ -210,6 +210,13 @@ def parse_arguments():
         action='store_true',
         help='Draw circles around control buttons'
     )
+    parser.add_argument(
+        '--left-button',
+        type=str,
+        choices=['empty', 'lyrics', 'random', 'loop'],
+        default='lyrics',
+        help='Left button mode: empty (no button), lyrics, random, or loop (default: lyrics)'
+    )
     return parser.parse_args()
 
 
@@ -224,24 +231,25 @@ def get_display_info(display_index):
     return mode
 
 
-def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, is_circle=False, is_circle2=False, hide_like_button=False, round_controls=False, debug=False):
+def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, is_circle=False, is_circle2=False, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics'):
     """Draw the Now Playing UI based on orientation or mode
     
     Args:
         hide_like_button: If True, don't render the like button
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
+        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
     if is_circle2:
-        return draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug)
+        return draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug, left_button)
     elif is_circle:
-        return draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug)
+        return draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug, left_button)
     elif is_portrait:
-        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug)
+        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug, left_button)
     else:
-        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug)
+        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug, left_button)
 
 
 def main():
@@ -488,7 +496,7 @@ def main():
         button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
                           args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug)]
+                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug, args.left_button)]
         sdl2.SDL_RenderPresent(renderer)
         
         def check_button_hit(x, y):
@@ -521,7 +529,18 @@ def main():
                         # Get player name from now_playing_data
                         player_name = now_playing_data.get('player_name') if now_playing_data else None
                         
-                        if button == 'prev':
+                        if button == 'left':
+                            # Handle left button based on mode
+                            if args.left_button == 'random':
+                                logger.info("Random button pressed - not yet implemented")
+                                # TODO: Implement random/shuffle functionality
+                            elif args.left_button == 'loop':
+                                logger.info("Loop button pressed - not yet implemented")
+                                # TODO: Implement loop/repeat functionality
+                            elif args.left_button == 'lyrics':
+                                logger.info("Lyrics button pressed - not yet implemented")
+                                # TODO: Implement lyrics display functionality
+                        elif button == 'prev':
                             if ac_client and not args.demo:
                                 ac_client.previous_track(player_name)
                         elif button == 'play':
@@ -554,7 +573,18 @@ def main():
                         # Get player name from now_playing_data
                         player_name = now_playing_data.get('player_name') if now_playing_data else None
                         
-                        if button == 'prev':
+                        if button == 'left':
+                            # Handle left button based on mode
+                            if args.left_button == 'random':
+                                logger.info("Random button pressed - not yet implemented")
+                                # TODO: Implement random/shuffle functionality
+                            elif args.left_button == 'loop':
+                                logger.info("Loop button pressed - not yet implemented")
+                                # TODO: Implement loop/repeat functionality
+                            elif args.left_button == 'lyrics':
+                                logger.info("Lyrics button pressed - not yet implemented")
+                                # TODO: Implement lyrics display functionality
+                        elif button == 'prev':
                             if ac_client and not args.demo:
                                 ac_client.previous_track(player_name)
                         elif button == 'play':
@@ -596,7 +626,7 @@ def main():
             button_rects[0] = draw_now_playing_ui(renderer, layout_width, layout_height, 
                               font_large, font_medium, font_small, font_icons, is_portrait, 
                               args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug)
+                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug, args.left_button)
             
             # Present the rendered frame
             sdl2.SDL_RenderPresent(renderer)

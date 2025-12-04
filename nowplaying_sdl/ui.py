@@ -172,8 +172,8 @@ def draw_circle_outline(renderer, physical_center_x, physical_center_y, physical
 def render_control_buttons(renderer, button_y, button_size, button_spacing, center_x, total_width,
                           prev_color, play_color, next_color, like_color,
                           font_icons_buttons, minimal_buttons, liked, no_control,
-                          rotation, screen_width, screen_height, border_radius=35, hide_like_button=False, is_playing=True, round_controls=False, debug=False):
-    """Render control buttons (prev, play, next, like)
+                          rotation, screen_width, screen_height, border_radius=35, hide_like_button=False, is_playing=True, round_controls=False, debug=False, left_button='lyrics'):
+    """Render control buttons (left, prev, play, next, like)
     
     Args:
         renderer: SDL2 renderer
@@ -194,9 +194,10 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         is_playing: If True, show pause icon; if False, show play icon
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
+        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
     
     Returns:
-        Dict of button rectangles: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
+        Dict of button rectangles: {'left': (x,y,w,h), 'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
     button_rects = {}
     
@@ -221,35 +222,53 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         play_size = int(button_size * 1.3) if minimal_buttons else button_size
         play_offset = (play_size - button_size) // 2  # Offset to center the larger button vertically
         
-        # Calculate button positions to center them (include lyrics button)
-        num_buttons = 3 if hide_like_button else 4
-        num_buttons += 1  # Add lyrics button
+        # Calculate button positions to center them
+        num_buttons = 3 if hide_like_button else 4  # prev, play, next, [like]
+        if left_button != 'empty':
+            num_buttons += 1  # Add left button
         
         # Adjust total width calculation for minimal mode with larger play button
         if minimal_buttons:
-            # lyrics + prev + play(larger) + next + like = 5 buttons (4 regular + 1 larger)
+            # left + prev + play(larger) + next + like = up to 5 buttons (4 regular + 1 larger)
             total_buttons_width = button_size * (num_buttons - 1) + play_size + button_spacing * (num_buttons - 1)
         else:
             total_buttons_width = button_size * num_buttons + button_spacing * (num_buttons - 1)
         buttons_start_x = center_x - total_buttons_width // 2
         
-        # Lyrics button (on the left side)
-        lyrics_color = (100, 100, 100)
-        lyrics_x = buttons_start_x
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, lyrics_x, button_y, button_size, button_size, border_radius, 
-                            *lyrics_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "lyrics", 
-                               lyrics_x + button_size // 2, button_y + button_size // 2, 
-                               255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, "lyrics", 
-                               lyrics_x + button_size // 2, button_y + button_size // 2, 
-                               *lyrics_color, rotation, screen_width, screen_height)
-        button_rects['lyrics'] = (lyrics_x, button_y, button_size, button_size)
+        # Left button (on the left side) - empty, lyrics, random, or loop
+        if left_button != 'empty':
+            # Determine icon and color based on mode
+            if left_button == 'lyrics':
+                left_icon = "lyrics"
+                left_color = (100, 100, 100)
+            elif left_button == 'random':
+                left_icon = "shuffle"
+                left_color = (100, 100, 100)
+            elif left_button == 'loop':
+                left_icon = "repeat"
+                left_color = (100, 100, 100)
+            else:
+                left_icon = "lyrics"
+                left_color = (100, 100, 100)
+            
+            left_x = buttons_start_x
+            if not minimal_buttons:
+                draw_rounded_rect(renderer, left_x, button_y, button_size, button_size, border_radius, 
+                                *left_color, 255, rotation, screen_width, screen_height)
+                render_text_centered(renderer, font_icons_buttons, left_icon, 
+                                   left_x + button_size // 2, button_y + button_size // 2, 
+                                   255, 255, 255, rotation, screen_width, screen_height)
+            else:
+                render_text_centered(renderer, font_icons_buttons, left_icon, 
+                                   left_x + button_size // 2, button_y + button_size // 2, 
+                                   *left_color, rotation, screen_width, screen_height)
+            button_rects['left'] = (left_x, button_y, button_size, button_size)
         
         # Previous button
-        prev_x = lyrics_x + button_size + button_spacing
+        if left_button != 'empty':
+            prev_x = buttons_start_x + button_size + button_spacing
+        else:
+            prev_x = buttons_start_x
         if not minimal_buttons:
             draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, border_radius, 
                             *prev_color, 255, rotation, screen_width, screen_height)
@@ -408,7 +427,7 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
             sdlttf.TTF_CloseFont(font_icons_large)
 
 
-def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False):
+def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics'):
     """Draw the Now Playing UI in portrait orientation
     
     Args:
@@ -420,6 +439,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         hide_like_button: If True, don't render the like button
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
+        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -478,7 +498,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         renderer, button_y, button_size, button_spacing, center_x, width,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=35, hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug
+        rotation, screen_width, screen_height, border_radius=35, hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug, left_button=left_button
     )
     
     if needs_font_cleanup:
@@ -487,7 +507,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     return button_rects
 
 
-def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False):
+def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics'):
     """Draw the Now Playing UI in landscape orientation
     
     Args:
@@ -498,6 +518,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         cover_cache: CoverArtCache instance for downloading cover art
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
+        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -566,7 +587,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         renderer, button_y, button_size, button_spacing, content_center_x, content_width,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=40, hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug
+        rotation, screen_width, screen_height, border_radius=40, hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug, left_button=left_button
     )
     
     if needs_font_cleanup:
@@ -575,7 +596,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     return button_rects
 
 
-def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False):
+def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics'):
     """Draw the Now Playing UI in circular layout mode
     
     Args:
@@ -586,6 +607,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
         cover_cache: CoverArtCache instance for downloading cover art
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
+        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -654,7 +676,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
         renderer, button_y, button_size, button_spacing, circle_center_x, diameter,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button, is_playing=is_playing
+        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug, left_button=left_button
     )
     
     if needs_font_cleanup:
@@ -663,7 +685,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
     return button_rects
 
 
-def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False):
+def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False, left_button='lyrics'):
     """Draw the Now Playing UI in circular layout mode with larger cover and smaller fonts
     
     Args:
@@ -674,6 +696,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
         cover_cache: CoverArtCache instance for downloading cover art
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
+        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -781,7 +804,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
         renderer, button_y, button_size, button_spacing, circle_center_x, diameter,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug
+        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug, left_button=left_button
     )
     
     if needs_font_cleanup:
