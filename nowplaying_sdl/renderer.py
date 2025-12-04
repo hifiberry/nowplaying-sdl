@@ -304,9 +304,13 @@ def render_text_centered(renderer, font, text, center_x, center_y, r, g, b, rota
         rotation: Rotation angle in degrees (0, 90, 180, 270)
         screen_width, screen_height: Screen dimensions (required for rotation)
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     color = sdl2.SDL_Color(r, g, b, 255)
     surface = sdlttf.TTF_RenderUTF8_Blended(font, text.encode('utf-8'), color)
     if not surface:
+        logger.warning(f"Failed to render text '{text}' at ({center_x}, {center_y}): {sdlttf.TTF_GetError().decode('utf-8')}")
         return
     
     texture = sdl2.SDL_CreateTextureFromSurface(renderer, surface)
