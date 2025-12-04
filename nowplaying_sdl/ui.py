@@ -172,7 +172,7 @@ def draw_circle_outline(renderer, physical_center_x, physical_center_y, physical
 def render_control_buttons(renderer, button_y, button_size, button_spacing, center_x, total_width,
                           prev_color, play_color, next_color, like_color,
                           font_icons_buttons, minimal_buttons, liked, no_control,
-                          rotation, screen_width, screen_height, border_radius=35, hide_like_button=False, is_playing=True):
+                          rotation, screen_width, screen_height, border_radius=35, hide_like_button=False, is_playing=True, round_controls=False, debug=False):
     """Render control buttons (prev, play, next, like)
     
     Args:
@@ -192,6 +192,8 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         border_radius: Border radius for button backgrounds (default 35)
         hide_like_button: If True, don't render the like button
         is_playing: If True, show pause icon; if False, show play icon
+        round_controls: If True, draw circles around control buttons
+        debug: If True, print debug info to console
     
     Returns:
         Dict of button rectangles: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
@@ -215,13 +217,39 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
                                    *like_color, rotation, screen_width, screen_height)
             button_rects['like'] = (like_x, button_y, button_size, button_size)
     else:
-        # Calculate button positions to center them
+        # In minimal mode, make play button 30% larger
+        play_size = int(button_size * 1.3) if minimal_buttons else button_size
+        play_offset = (play_size - button_size) // 2  # Offset to center the larger button vertically
+        
+        # Calculate button positions to center them (include lyrics button)
         num_buttons = 3 if hide_like_button else 4
-        total_buttons_width = button_size * num_buttons + button_spacing * (num_buttons - 1)
+        num_buttons += 1  # Add lyrics button
+        
+        # Adjust total width calculation for minimal mode with larger play button
+        if minimal_buttons:
+            # lyrics + prev + play(larger) + next + like = 5 buttons (4 regular + 1 larger)
+            total_buttons_width = button_size * (num_buttons - 1) + play_size + button_spacing * (num_buttons - 1)
+        else:
+            total_buttons_width = button_size * num_buttons + button_spacing * (num_buttons - 1)
         buttons_start_x = center_x - total_buttons_width // 2
         
+        # Lyrics button (on the left side)
+        lyrics_color = (100, 100, 100)
+        lyrics_x = buttons_start_x
+        if not minimal_buttons:
+            draw_rounded_rect(renderer, lyrics_x, button_y, button_size, button_size, border_radius, 
+                            *lyrics_color, 255, rotation, screen_width, screen_height)
+            render_text_centered(renderer, font_icons_buttons, "lyrics", 
+                               lyrics_x + button_size // 2, button_y + button_size // 2, 
+                               255, 255, 255, rotation, screen_width, screen_height)
+        else:
+            render_text_centered(renderer, font_icons_buttons, "lyrics", 
+                               lyrics_x + button_size // 2, button_y + button_size // 2, 
+                               *lyrics_color, rotation, screen_width, screen_height)
+        button_rects['lyrics'] = (lyrics_x, button_y, button_size, button_size)
+        
         # Previous button
-        prev_x = buttons_start_x
+        prev_x = lyrics_x + button_size + button_spacing
         if not minimal_buttons:
             draw_rounded_rect(renderer, prev_x, button_y, button_size, button_size, border_radius, 
                             *prev_color, 255, rotation, screen_width, screen_height)
@@ -234,9 +262,11 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
                                *prev_color, rotation, screen_width, screen_height)
         button_rects['prev'] = (prev_x, button_y, button_size, button_size)
         
-        # Play/Pause button
+        # Play/Pause button (larger in minimal mode)
         play_icon = "pause" if is_playing else "play_arrow"
         play_x = prev_x + button_size + button_spacing
+        play_button_y = button_y - play_offset  # Center vertically
+        
         if not minimal_buttons:
             draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, border_radius, 
                             *play_color, 255, rotation, screen_width, screen_height)
@@ -244,13 +274,17 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
                                play_x + button_size // 2, button_y + button_size // 2, 
                                255, 255, 255, rotation, screen_width, screen_height)
         else:
-            render_text_centered(renderer, font_icons_buttons, play_icon, 
-                               play_x + button_size // 2, button_y + button_size // 2, 
+            # Load larger font for play button in minimal mode (160% of other buttons)
+            play_font_size = int(48 * 1.5 * 1.6)  # Base size * minimal multiplier * 60% larger
+            play_font = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), play_font_size)
+            render_text_centered(renderer, play_font, play_icon, 
+                               play_x + play_size // 2, play_button_y + play_size // 2, 
                                *play_color, rotation, screen_width, screen_height)
-        button_rects['play'] = (play_x, button_y, button_size, button_size)
+            sdlttf.TTF_CloseFont(play_font)
+        button_rects['play'] = (play_x, play_button_y, play_size, play_size)
         
-        # Next button
-        next_x = play_x + button_size + button_spacing
+        # Next button (account for larger play button in minimal mode)
+        next_x = play_x + play_size + button_spacing
         if not minimal_buttons:
             draw_rounded_rect(renderer, next_x, button_y, button_size, button_size, border_radius, 
                             *next_color, 255, rotation, screen_width, screen_height)
@@ -278,6 +312,29 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
                                    like_x + button_size // 2, button_y + button_size // 2, 
                                    *like_color, rotation, screen_width, screen_height)
             button_rects['like'] = (like_x, button_y, button_size, button_size)
+    
+    # Debug output
+    if debug:
+        print("\n=== Button Positions Debug ===")
+        for button_name, rect in button_rects.items():
+            print(f"{button_name}: x={rect[0]}, y={rect[1]}, w={rect[2]}, h={rect[3]}")
+        print(f"Center X: {center_x}")
+        print(f"Total Width: {total_width}")
+        print(f"Buttons Start X: {buttons_start_x if not no_control else 'N/A'}")
+        print("============================\n")
+    
+    # Draw circles around buttons if round_controls is enabled
+    if round_controls:
+        from .renderer import draw_circle
+        for button_name, rect in button_rects.items():
+            x, y, w, h = rect
+            # Calculate circle center and radius
+            circle_x = x + w // 2
+            circle_y = y + h // 2
+            circle_radius = max(w, h) // 2 + 5  # Add 5px padding
+            
+            # Draw circle outline (white color, alpha 255)
+            draw_circle(renderer, circle_x, circle_y, circle_radius, 255, 255, 255, 255)
     
     return button_rects
 
@@ -351,7 +408,7 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
             sdlttf.TTF_CloseFont(font_icons_large)
 
 
-def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False):
+def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False):
     """Draw the Now Playing UI in portrait orientation
     
     Args:
@@ -361,6 +418,8 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         now_playing_data: Dict with artist, title, album, cover_url from AudioControl
         cover_cache: CoverArtCache instance for downloading cover art
         hide_like_button: If True, don't render the like button
+        round_controls: If True, draw circles around control buttons
+        debug: If True, print debug info to console
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -419,7 +478,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         renderer, button_y, button_size, button_spacing, center_x, width,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=35, hide_like_button=hide_like_button, is_playing=is_playing
+        rotation, screen_width, screen_height, border_radius=35, hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug
     )
     
     if needs_font_cleanup:
@@ -428,7 +487,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     return button_rects
 
 
-def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False):
+def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False):
     """Draw the Now Playing UI in landscape orientation
     
     Args:
@@ -437,6 +496,8 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         demo: If True, use demo data; if False, use now_playing_data
         now_playing_data: Dict with artist, title, album, cover_url from AudioControl
         cover_cache: CoverArtCache instance for downloading cover art
+        round_controls: If True, draw circles around control buttons
+        debug: If True, print debug info to console
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -505,7 +566,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         renderer, button_y, button_size, button_spacing, content_center_x, content_width,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=40, hide_like_button=hide_like_button, is_playing=is_playing
+        rotation, screen_width, screen_height, border_radius=40, hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug
     )
     
     if needs_font_cleanup:
@@ -514,7 +575,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     return button_rects
 
 
-def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False):
+def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False):
     """Draw the Now Playing UI in circular layout mode
     
     Args:
@@ -523,6 +584,8 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
         demo: If True, use demo data; if False, use now_playing_data
         now_playing_data: Dict with artist, title, album, cover_url from AudioControl
         cover_cache: CoverArtCache instance for downloading cover art
+        round_controls: If True, draw circles around control buttons
+        debug: If True, print debug info to console
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -600,7 +663,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
     return button_rects
 
 
-def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False):
+def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False, round_controls=False, debug=False):
     """Draw the Now Playing UI in circular layout mode with larger cover and smaller fonts
     
     Args:
@@ -609,6 +672,8 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
         demo: If True, use demo data; if False, use now_playing_data
         now_playing_data: Dict with artist, title, album, cover_url from AudioControl
         cover_cache: CoverArtCache instance for downloading cover art
+        round_controls: If True, draw circles around control buttons
+        debug: If True, print debug info to console
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -716,7 +781,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
         renderer, button_y, button_size, button_spacing, circle_center_x, diameter,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button, is_playing=is_playing
+        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button, is_playing=is_playing, round_controls=round_controls, debug=debug
     )
     
     if needs_font_cleanup:

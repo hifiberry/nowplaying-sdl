@@ -205,6 +205,11 @@ def parse_arguments():
         action='store_true',
         help='Enable debug logging'
     )
+    parser.add_argument(
+        '--round-controls',
+        action='store_true',
+        help='Draw circles around control buttons'
+    )
     return parser.parse_args()
 
 
@@ -219,22 +224,24 @@ def get_display_info(display_index):
     return mode
 
 
-def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, is_circle=False, is_circle2=False, hide_like_button=False):
+def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, is_circle=False, is_circle2=False, hide_like_button=False, round_controls=False, debug=False):
     """Draw the Now Playing UI based on orientation or mode
     
     Args:
         hide_like_button: If True, don't render the like button
+        round_controls: If True, draw circles around control buttons
+        debug: If True, print debug info to console
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
     if is_circle2:
-        return draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button)
+        return draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug)
     elif is_circle:
-        return draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button)
+        return draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug)
     elif is_portrait:
-        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button)
+        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug)
     else:
-        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button)
+        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button, round_controls, debug)
 
 
 def main():
@@ -481,7 +488,7 @@ def main():
         button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
                           args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like)]
+                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug)]
         sdl2.SDL_RenderPresent(renderer)
         
         def check_button_hit(x, y):
@@ -589,7 +596,7 @@ def main():
             button_rects[0] = draw_now_playing_ui(renderer, layout_width, layout_height, 
                               font_large, font_medium, font_small, font_icons, is_portrait, 
                               args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like)
+                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug)
             
             # Present the rendered frame
             sdl2.SDL_RenderPresent(renderer)
