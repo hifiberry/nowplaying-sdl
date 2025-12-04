@@ -213,9 +213,9 @@ def parse_arguments():
     parser.add_argument(
         '--left-button',
         type=str,
-        choices=['empty', 'lyrics', 'random', 'loop'],
-        default='lyrics',
-        help='Left button mode: empty (no button), lyrics, random, or loop (default: lyrics)'
+        choices=['none', 'empty', 'lyrics', 'random', 'loop'],
+        default='none',
+        help='Left button mode: none (removed), empty (no icon), lyrics, random, or loop (default: none)'
     )
     return parser.parse_args()
 

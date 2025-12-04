@@ -194,7 +194,7 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         is_playing: If True, show pause icon; if False, show play icon
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
-        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
+        left_button: Left button mode ('none', 'empty', 'lyrics', 'random', 'loop')
     
     Returns:
         Dict of button rectangles: {'left': (x,y,w,h), 'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
@@ -224,8 +224,8 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         
         # Calculate button positions to center them
         num_buttons = 3 if hide_like_button else 4  # prev, play, next, [like]
-        if left_button != 'empty':
-            num_buttons += 1  # Add left button
+        if left_button != 'none':
+            num_buttons += 1  # Add left button (even for 'empty')
         
         # Adjust total width calculation for minimal mode with larger play button
         if minimal_buttons:
@@ -235,37 +235,42 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
             total_buttons_width = button_size * num_buttons + button_spacing * (num_buttons - 1)
         buttons_start_x = center_x - total_buttons_width // 2
         
-        # Left button (on the left side) - empty, lyrics, random, or loop
-        if left_button != 'empty':
-            # Determine icon and color based on mode
-            if left_button == 'lyrics':
-                left_icon = "lyrics"
-                left_color = (100, 100, 100)
-            elif left_button == 'random':
-                left_icon = "shuffle"
-                left_color = (100, 100, 100)
-            elif left_button == 'loop':
-                left_icon = "repeat"
-                left_color = (100, 100, 100)
-            else:
-                left_icon = "lyrics"
-                left_color = (100, 100, 100)
-            
+        # Left button (on the left side) - none, empty, lyrics, random, or loop
+        if left_button != 'none':
             left_x = buttons_start_x
-            if not minimal_buttons:
-                draw_rounded_rect(renderer, left_x, button_y, button_size, button_size, border_radius, 
-                                *left_color, 255, rotation, screen_width, screen_height)
-                render_text_centered(renderer, font_icons_buttons, left_icon, 
-                                   left_x + button_size // 2, button_y + button_size // 2, 
-                                   255, 255, 255, rotation, screen_width, screen_height)
+            left_color = (100, 100, 100)
+            
+            # For 'empty', draw background but no icon
+            if left_button == 'empty':
+                if not minimal_buttons:
+                    draw_rounded_rect(renderer, left_x, button_y, button_size, button_size, border_radius, 
+                                    *left_color, 255, rotation, screen_width, screen_height)
             else:
-                render_text_centered(renderer, font_icons_buttons, left_icon, 
-                                   left_x + button_size // 2, button_y + button_size // 2, 
-                                   *left_color, rotation, screen_width, screen_height)
+                # Determine icon based on mode
+                if left_button == 'lyrics':
+                    left_icon = "lyrics"
+                elif left_button == 'random':
+                    left_icon = "shuffle"
+                elif left_button == 'loop':
+                    left_icon = "repeat"
+                else:
+                    left_icon = "lyrics"
+                
+                if not minimal_buttons:
+                    draw_rounded_rect(renderer, left_x, button_y, button_size, button_size, border_radius, 
+                                    *left_color, 255, rotation, screen_width, screen_height)
+                    render_text_centered(renderer, font_icons_buttons, left_icon, 
+                                       left_x + button_size // 2, button_y + button_size // 2, 
+                                       255, 255, 255, rotation, screen_width, screen_height)
+                else:
+                    render_text_centered(renderer, font_icons_buttons, left_icon, 
+                                       left_x + button_size // 2, button_y + button_size // 2, 
+                                       *left_color, rotation, screen_width, screen_height)
+            
             button_rects['left'] = (left_x, button_y, button_size, button_size)
         
         # Previous button
-        if left_button != 'empty':
+        if left_button != 'none':
             prev_x = buttons_start_x + button_size + button_spacing
         else:
             prev_x = buttons_start_x
@@ -439,7 +444,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         hide_like_button: If True, don't render the like button
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
-        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
+        left_button: Left button mode ('none', 'empty', 'lyrics', 'random', 'loop')
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -518,7 +523,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         cover_cache: CoverArtCache instance for downloading cover art
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
-        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
+        left_button: Left button mode ('none', 'empty', 'lyrics', 'random', 'loop')
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -607,7 +612,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
         cover_cache: CoverArtCache instance for downloading cover art
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
-        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
+        left_button: Left button mode ('none', 'empty', 'lyrics', 'random', 'loop')
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -696,7 +701,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
         cover_cache: CoverArtCache instance for downloading cover art
         round_controls: If True, draw circles around control buttons
         debug: If True, print debug info to console
-        left_button: Left button mode ('empty', 'lyrics', 'random', 'loop')
+        left_button: Left button mode ('none', 'empty', 'lyrics', 'random', 'loop')
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
