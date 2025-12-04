@@ -510,8 +510,20 @@ def main():
                     button = check_button_hit(touch_x, touch_y)
                     if button:
                         logger.info(f"Button pressed: {button}")
-                        # Toggle liked state when like button is pressed
-                        if button == 'like':
+                        
+                        # Get player name from now_playing_data
+                        player_name = now_playing_data.get('player_name') if now_playing_data else None
+                        
+                        if button == 'prev':
+                            if ac_client and not args.demo:
+                                ac_client.previous_track(player_name)
+                        elif button == 'play':
+                            if ac_client and not args.demo:
+                                ac_client.play_pause(player_name)
+                        elif button == 'next':
+                            if ac_client and not args.demo:
+                                ac_client.next_track(player_name)
+                        elif button == 'like':
                             if args.demo:
                                 # In demo mode, just toggle locally
                                 liked_state[0] = not liked_state[0]
@@ -531,8 +543,20 @@ def main():
                     button = check_button_hit(event.button.x, event.button.y)
                     if button:
                         logger.info(f"Button pressed: {button}")
-                        # Toggle liked state when like button is pressed
-                        if button == 'like':
+                        
+                        # Get player name from now_playing_data
+                        player_name = now_playing_data.get('player_name') if now_playing_data else None
+                        
+                        if button == 'prev':
+                            if ac_client and not args.demo:
+                                ac_client.previous_track(player_name)
+                        elif button == 'play':
+                            if ac_client and not args.demo:
+                                ac_client.play_pause(player_name)
+                        elif button == 'next':
+                            if ac_client and not args.demo:
+                                ac_client.next_track(player_name)
+                        elif button == 'like':
                             if args.demo:
                                 # In demo mode, just toggle locally
                                 liked_state[0] = not liked_state[0]

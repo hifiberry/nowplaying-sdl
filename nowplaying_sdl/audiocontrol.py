@@ -458,3 +458,91 @@ class AudioControlClient:
         else:
             self.add_favorite(title, artist, album)
             return True
+    
+    def send_player_command(self, command: str, player_name: str = None) -> bool:
+        """Send a command to a specific player or the active player
+        
+        Args:
+            command: Command to send (play, pause, playpause, stop, next, previous, etc.)
+            player_name: Name of the player to send command to. If None, uses 'active'
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Use player_name if provided, otherwise default to 'active'
+            player = player_name if player_name else 'active'
+            url = f"{self.api_url}/player/{player}/command/{command}"
+            logger.debug(f"Sending player command '{command}' to player '{player}'")
+            
+            request = urllib.request.Request(
+                url,
+                method='POST',
+                headers={'User-Agent': 'NowPlayingSDL/1.0'}
+            )
+            
+            with urllib.request.urlopen(request, timeout=5) as response:
+                data = response.read().decode('utf-8')
+                result = json.loads(data)
+                
+                if result.get('success'):
+                    logger.debug(f"Command '{command}' sent successfully to '{player}'")
+                    return True
+                else:
+                    logger.warning(f"Command '{command}' failed for '{player}': {result.get('message')}")
+                    return False
+                    
+        except urllib.error.HTTPError as e:
+            logger.error(f"HTTP error sending command '{command}' to '{player}': {e.code} {e.reason}")
+            return False
+        except Exception as e:
+            logger.error(f"Error sending command '{command}' to '{player}': {e}")
+            return False
+    
+    def play(self, player_name: str = None) -> bool:
+        """Start playback
+        
+        Args:
+            player_name: Name of the player. If None, uses active player
+        """
+        return self.send_player_command('play', player_name)
+    
+    def pause(self, player_name: str = None) -> bool:
+        """Pause playback
+        
+        Args:
+            player_name: Name of the player. If None, uses active player
+        """
+        return self.send_player_command('pause', player_name)
+    
+    def play_pause(self, player_name: str = None) -> bool:
+        """Toggle play/pause
+        
+        Args:
+            player_name: Name of the player. If None, uses active player
+        """
+        return self.send_player_command('playpause', player_name)
+    
+    def stop(self, player_name: str = None) -> bool:
+        """Stop playback
+        
+        Args:
+            player_name: Name of the player. If None, uses active player
+        """
+        return self.send_player_command('stop', player_name)
+    
+    def next_track(self, player_name: str = None) -> bool:
+        """Skip to next track
+        
+        Args:
+            player_name: Name of the player. If None, uses active player
+        """
+        return self.send_player_command('next', player_name)
+    
+    def previous_track(self, player_name: str = None) -> bool:
+        """Skip to previous track
+        
+        Args:
+            player_name: Name of the player. If None, uses active player
+        """
+        return self.send_player_command('previous', player_name)
