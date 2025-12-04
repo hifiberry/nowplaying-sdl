@@ -78,10 +78,10 @@ def get_button_colors(bw_buttons):
         Tuple of (prev_color, play_color, next_color, like_color)
     """
     if bw_buttons:
-        prev_color = (80, 80, 80)
-        play_color = (80, 80, 80)
-        next_color = (80, 80, 80)
-        like_color = (80, 80, 80)
+        prev_color = (40, 40, 40)
+        play_color = (40, 40, 40)
+        next_color = (40, 40, 40)
+        like_color = (40, 40, 40)
     else:
         prev_color = (60, 60, 60)
         play_color = (30, 150, 30)
