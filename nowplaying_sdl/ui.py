@@ -172,7 +172,7 @@ def draw_circle_outline(renderer, physical_center_x, physical_center_y, physical
 def render_control_buttons(renderer, button_y, button_size, button_spacing, center_x, total_width,
                           prev_color, play_color, next_color, like_color,
                           font_icons_buttons, minimal_buttons, liked, no_control,
-                          rotation, screen_width, screen_height, border_radius=35, hide_like_button=False):
+                          rotation, screen_width, screen_height, border_radius=35, hide_like_button=False, is_playing=True):
     """Render control buttons (prev, play, next, like)
     
     Args:
@@ -191,6 +191,7 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         screen_width, screen_height: Physical screen dimensions
         border_radius: Border radius for button backgrounds (default 35)
         hide_like_button: If True, don't render the like button
+        is_playing: If True, show pause icon; if False, show play icon
     
     Returns:
         Dict of button rectangles: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
@@ -234,15 +235,16 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         button_rects['prev'] = (prev_x, button_y, button_size, button_size)
         
         # Play/Pause button
+        play_icon = "pause" if is_playing else "play_arrow"
         play_x = prev_x + button_size + button_spacing
         if not minimal_buttons:
             draw_rounded_rect(renderer, play_x, button_y, button_size, button_size, border_radius, 
                             *play_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, "play_arrow", 
+            render_text_centered(renderer, font_icons_buttons, play_icon, 
                                play_x + button_size // 2, button_y + button_size // 2, 
                                255, 255, 255, rotation, screen_width, screen_height)
         else:
-            render_text_centered(renderer, font_icons_buttons, "play_arrow", 
+            render_text_centered(renderer, font_icons_buttons, play_icon, 
                                play_x + button_size // 2, button_y + button_size // 2, 
                                *play_color, rotation, screen_width, screen_height)
         button_rects['play'] = (play_x, button_y, button_size, button_size)
@@ -363,6 +365,12 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
     
+    # Determine if currently playing
+    is_playing = False
+    if now_playing_data and not demo:
+        state = now_playing_data.get('state', '').lower()
+        is_playing = state == 'playing'
+    
     # Clear screen to light gray background
     sdl2.SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255)
     sdl2.SDL_RenderClear(renderer)
@@ -411,7 +419,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         renderer, button_y, button_size, button_spacing, center_x, width,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=35, hide_like_button=hide_like_button
+        rotation, screen_width, screen_height, border_radius=35, hide_like_button=hide_like_button, is_playing=is_playing
     )
     
     if needs_font_cleanup:
@@ -432,6 +440,12 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
+    # Determine if currently playing
+    is_playing = False
+    if now_playing_data and not demo:
+        state = now_playing_data.get('state', '').lower()
+        is_playing = state == 'playing'
+    
     # Layout customization constants
     TEXT_VERTICAL_OFFSET_PERCENT = 0.10  # Move text down by 10% of height
     BUTTON_VERTICAL_OFFSET_PERCENT = -0.10  # Move buttons up by 10% of height (negative = up)
@@ -491,7 +505,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         renderer, button_y, button_size, button_spacing, content_center_x, content_width,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=40, hide_like_button=hide_like_button
+        rotation, screen_width, screen_height, border_radius=40, hide_like_button=hide_like_button, is_playing=is_playing
     )
     
     if needs_font_cleanup:
@@ -512,6 +526,12 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
+    
+    # Determine if currently playing
+    is_playing = False
+    if now_playing_data and not demo:
+        state = now_playing_data.get('state', '').lower()
+        is_playing = state == 'playing'
     
     # Clear screen to light gray background
     sdl2.SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255)
@@ -571,7 +591,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
         renderer, button_y, button_size, button_spacing, circle_center_x, diameter,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button
+        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button, is_playing=is_playing
     )
     
     if needs_font_cleanup:
@@ -592,6 +612,12 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
+    
+    # Determine if currently playing
+    is_playing = False
+    if now_playing_data and not demo:
+        state = now_playing_data.get('state', '').lower()
+        is_playing = state == 'playing'
     
     # Clear screen to light gray background
     sdl2.SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255)
@@ -690,7 +716,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
         renderer, button_y, button_size, button_spacing, circle_center_x, diameter,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button
+        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button, is_playing=is_playing
     )
     
     if needs_font_cleanup:
