@@ -59,6 +59,27 @@ liked = false
 demo = false
 ```
 
+### Display Configuration Examples
+
+To configure the displayy add to `/boot/firmware/config.txt`:
+
+**For 7-inch Touch Display 2:**
+```ini
+dtoverlay=vc4-kms-dsi-ili9881-7inch
+```
+
+**For 5-inch Touch Display 2:**
+```ini
+dtoverlay=vc4-kms-dsi-ili9881-5inch
+```
+
+** Waveshare Round LCD (720x720)
+For Waveshare 1.28" or similar round displays in circle mode:
+
+```ini
+dtoverlay=vc4-kms-dsi-waveshare-panel-v2,4_0_inch_c
+```
+
 ### Systemd Service
 
 A systemd user service is provided for automatic startup:
