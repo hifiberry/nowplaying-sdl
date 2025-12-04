@@ -117,6 +117,9 @@ nowplaying-sdl --circle
 # Minimal buttons (no background)
 nowplaying-sdl --minimal-buttons
 
+# Volume slider (portrait/landscape only)
+nowplaying-sdl --volume-slider
+
 # No control buttons
 nowplaying-sdl --no-control
 
