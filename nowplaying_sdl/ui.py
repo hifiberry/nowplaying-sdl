@@ -90,6 +90,30 @@ def get_button_colors(bw_buttons):
     return prev_color, play_color, next_color, like_color
 
 
+def get_button_icon_font(minimal_buttons, font_icons, size_multiplier=1.5):
+    """Get the appropriate icon font for buttons
+    
+    Args:
+        minimal_buttons: If True, load a larger icon font for minimal button style
+        font_icons: The default icon font to use if not minimal
+        size_multiplier: Size multiplier for minimal buttons (default 1.5 for fixed size, or button_size * 0.6 for scaled)
+    
+    Returns:
+        Tuple of (font_icons_buttons, needs_cleanup) where needs_cleanup indicates if font should be closed later
+    """
+    if minimal_buttons:
+        if isinstance(size_multiplier, float) and size_multiplier < 1.0:
+            # This is actually a button_size ratio (e.g., button_size * 0.6)
+            font_size = int(size_multiplier)
+        else:
+            # This is a fixed multiplier (e.g., 48 * 1.5)
+            font_size = int(48 * size_multiplier)
+        font_icons_buttons = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), font_size)
+        return font_icons_buttons, True
+    else:
+        return font_icons, False
+
+
 def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, screen_width=0, screen_height=0):
     """Render album cover art or placeholder
     
@@ -212,11 +236,8 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     # Get button colors
     prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
     
-    # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
-    if minimal_buttons:
-        font_icons_buttons = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), int(48 * 1.5))
-    else:
-        font_icons_buttons = font_icons
+    # Load icon font for buttons
+    font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, 1.5)
     
     if no_control:
         # Only show like button, centered (filled if liked, border if not)
@@ -270,7 +291,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
             render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
         button_rects['like'] = (like_x, button_y, button_size, button_size)
     
-    if minimal_buttons and font_icons_buttons != font_icons:
+    if needs_font_cleanup:
         sdlttf.TTF_CloseFont(font_icons_buttons)
     
     return button_rects
@@ -348,11 +369,8 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     # Get button colors
     prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
     
-    # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
-    if minimal_buttons:
-        font_icons_buttons = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), int(48 * 1.5))
-    else:
-        font_icons_buttons = font_icons
+    # Load icon font for buttons
+    font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, 1.5)
     
     if no_control:
         # Only show like button, centered (filled if liked, border if not)
@@ -406,7 +424,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
             render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
         button_rects['like'] = (like_x, button_y, button_size, button_size)
     
-    if minimal_buttons and font_icons_buttons != font_icons:
+    if needs_font_cleanup:
         sdlttf.TTF_CloseFont(font_icons_buttons)
     
     return button_rects
@@ -492,11 +510,8 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
     # Get button colors
     prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
     
-    # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
-    if minimal_buttons:
-        font_icons_buttons = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), int(button_size * 0.6))
-    else:
-        font_icons_buttons = font_icons
+    # Load icon font for buttons
+    font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, button_size * 0.6)
     
     if no_control:
         # Only show like button, centered (filled if liked, border if not)
@@ -550,7 +565,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
             render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
         button_rects['like'] = (like_x, button_y, button_size, button_size)
     
-    if minimal_buttons and font_icons_buttons != font_icons:
+    if needs_font_cleanup:
         sdlttf.TTF_CloseFont(font_icons_buttons)
     
     return button_rects
@@ -675,11 +690,8 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     # Get button colors
     prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
     
-    # Load larger icon font if minimal buttons
-    if minimal_buttons:
-        font_icons_buttons = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), int(button_size * 0.6))
-    else:
-        font_icons_buttons = font_icons
+    # Load icon font for buttons
+    font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, button_size * 0.6)
     
     if no_control:
         # Only show like button, centered
@@ -733,7 +745,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
             render_text_centered(renderer, font_icons_buttons, like_icon, like_x + button_size // 2, button_y + button_size // 2, *like_color, rotation, screen_width, screen_height)
         button_rects['like'] = (like_x, button_y, button_size, button_size)
     
-    if minimal_buttons and font_icons_buttons != font_icons:
+    if needs_font_cleanup:
         sdlttf.TTF_CloseFont(font_icons_buttons)
     
     return button_rects
