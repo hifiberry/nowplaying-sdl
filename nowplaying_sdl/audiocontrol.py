@@ -174,7 +174,7 @@ class AudioControlClient:
             time.sleep(self.update_interval)
     
     def start(self):
-        \"\"\"Start background polling\"\"\"
+        """Start background polling"""
         if self.running:
             return
         
