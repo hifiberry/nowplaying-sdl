@@ -103,12 +103,11 @@ def get_button_icon_font(minimal_buttons, font_icons, size_multiplier=1.5):
         Tuple of (font_icons_buttons, needs_cleanup) where needs_cleanup indicates if font should be closed later
     """
     if minimal_buttons:
-        if isinstance(size_multiplier, float) and size_multiplier < 1.0:
-            # This is actually a button_size ratio (e.g., button_size * 0.6)
-            font_size = int(size_multiplier)
-        else:
-            # This is a fixed multiplier (e.g., 48 * 1.5)
-            font_size = int(48 * size_multiplier)
+        # size_multiplier is the actual font size (e.g., button_size * 0.6 = 51.6)
+        font_size = int(size_multiplier)
+        # Ensure minimum font size
+        if font_size < 12:
+            font_size = 12
         font_icons_buttons = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), font_size)
         return font_icons_buttons, True
     else:
