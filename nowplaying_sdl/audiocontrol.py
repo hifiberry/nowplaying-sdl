@@ -131,6 +131,9 @@ class AudioControlClient:
         
         logger.debug(f"Formatted data - title: {title}, artist: {artist}, cover_url: {cover_url}")
         
+        # Check if this track is in favorites
+        is_fav = self.is_favorite(title, artist) if title and artist else False
+        
         return {
             "artist": artist,
             "title": title,
@@ -139,7 +142,8 @@ class AudioControlClient:
             "state": state,
             "position": data.get("position"),
             "duration": song.get("duration"),
-            "player_name": player_name
+            "player_name": player_name,
+            "is_favorite": is_fav
         }
     
     def get_current_data(self) -> Dict[str, Any]:
@@ -189,3 +193,157 @@ class AudioControlClient:
     def is_connected(self) -> bool:
         """Check if connection is working"""
         return self.error is None
+    
+    def get_favorites(self) -> Optional[Dict[str, Any]]:
+        """Get list of favorites from the API"""
+        try:
+            url = f"{self.api_url}/favourites"
+            logger.debug(f"Fetching favorites from: {url}")
+            
+            request = urllib.request.Request(
+                url,
+                headers={'User-Agent': 'NowPlayingSDL/1.0'}
+            )
+            
+            with urllib.request.urlopen(request, timeout=5) as response:
+                data = response.read().decode('utf-8')
+                result = json.loads(data)
+                logger.debug(f"Favorites response: {result}")
+                return result
+                
+        except Exception as e:
+            logger.error(f"Error fetching favorites: {e}")
+            return None
+    
+    def is_favorite(self, title: str, artist: str) -> bool:
+        """Check if the current track is in favorites
+        
+        Args:
+            title: Song title
+            artist: Song artist
+        
+        Returns:
+            True if the track is in favorites, False otherwise
+        """
+        if not title or not artist:
+            return False
+        
+        favorites = self.get_favorites()
+        if not favorites or "favourites" not in favorites:
+            return False
+        
+        # Check if current track is in favorites list
+        for fav in favorites["favourites"]:
+            if fav.get("title") == title and fav.get("artist") == artist:
+                return True
+        
+        return False
+    
+    def add_favorite(self, title: str, artist: str, album: str = None) -> bool:
+        """Add current track to favorites
+        
+        Args:
+            title: Song title
+            artist: Song artist
+            album: Song album (optional)
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        if not title or not artist:
+            logger.warning("Cannot add favorite: missing title or artist")
+            return False
+        
+        try:
+            url = f"{self.api_url}/favourites/add"
+            logger.info(f"Adding to favorites: {artist} - {title}")
+            
+            # Prepare the data
+            data = {
+                "title": title,
+                "artist": artist
+            }
+            if album:
+                data["album"] = album
+            
+            json_data = json.dumps(data).encode('utf-8')
+            
+            request = urllib.request.Request(
+                url,
+                data=json_data,
+                headers={
+                    'User-Agent': 'NowPlayingSDL/1.0',
+                    'Content-Type': 'application/json'
+                },
+                method='POST'
+            )
+            
+            with urllib.request.urlopen(request, timeout=5) as response:
+                logger.info(f"Added to favorites: {response.status}")
+                return response.status == 200
+                
+        except Exception as e:
+            logger.error(f"Error adding to favorites: {e}")
+            return False
+    
+    def remove_favorite(self, title: str, artist: str) -> bool:
+        """Remove track from favorites
+        
+        Args:
+            title: Song title
+            artist: Song artist
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        if not title or not artist:
+            logger.warning("Cannot remove favorite: missing title or artist")
+            return False
+        
+        try:
+            url = f"{self.api_url}/favourites/remove"
+            logger.info(f"Removing from favorites: {artist} - {title}")
+            
+            # Prepare the data
+            data = {
+                "title": title,
+                "artist": artist
+            }
+            
+            json_data = json.dumps(data).encode('utf-8')
+            
+            request = urllib.request.Request(
+                url,
+                data=json_data,
+                headers={
+                    'User-Agent': 'NowPlayingSDL/1.0',
+                    'Content-Type': 'application/json'
+                },
+                method='POST'
+            )
+            
+            with urllib.request.urlopen(request, timeout=5) as response:
+                logger.info(f"Removed from favorites: {response.status}")
+                return response.status == 200
+                
+        except Exception as e:
+            logger.error(f"Error removing from favorites: {e}")
+            return False
+    
+    def toggle_favorite(self, title: str, artist: str, album: str = None) -> bool:
+        """Toggle favorite status of current track
+        
+        Args:
+            title: Song title
+            artist: Song artist
+            album: Song album (optional)
+        
+        Returns:
+            True if now favorited, False if unfavorited or error
+        """
+        if self.is_favorite(title, artist):
+            self.remove_favorite(title, artist)
+            return False
+        else:
+            self.add_favorite(title, artist, album)
+            return True

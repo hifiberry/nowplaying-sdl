@@ -468,6 +468,10 @@ def main():
         if now_playing_data:
             logger.debug(f"Initial now playing data: {now_playing_data}")
         
+        # Get initial liked state from API if available
+        if now_playing_data and not args.demo:
+            liked_state[0] = now_playing_data.get('is_favorite', False)
+        
         button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
                           args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
@@ -502,7 +506,19 @@ def main():
                         logger.info(f"Button pressed: {button}")
                         # Toggle liked state when like button is pressed
                         if button == 'like':
-                            liked_state[0] = not liked_state[0]
+                            if args.demo:
+                                # In demo mode, just toggle locally
+                                liked_state[0] = not liked_state[0]
+                            elif ac_client and now_playing_data:
+                                # Call API to toggle favorite
+                                title = now_playing_data.get('title', '')
+                                artist = now_playing_data.get('artist', '')
+                                album = now_playing_data.get('album')
+                                if title and artist:
+                                    liked_state[0] = ac_client.toggle_favorite(title, artist, album)
+                                    logger.info(f"Favorite toggled: {liked_state[0]}")
+                            else:
+                                liked_state[0] = not liked_state[0]
                             logger.info(f"Liked: {liked_state[0]}")
                 elif event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                     # Mouse coordinates are in pixels
@@ -511,7 +527,19 @@ def main():
                         logger.info(f"Button pressed: {button}")
                         # Toggle liked state when like button is pressed
                         if button == 'like':
-                            liked_state[0] = not liked_state[0]
+                            if args.demo:
+                                # In demo mode, just toggle locally
+                                liked_state[0] = not liked_state[0]
+                            elif ac_client and now_playing_data:
+                                # Call API to toggle favorite
+                                title = now_playing_data.get('title', '')
+                                artist = now_playing_data.get('artist', '')
+                                album = now_playing_data.get('album')
+                                if title and artist:
+                                    liked_state[0] = ac_client.toggle_favorite(title, artist, album)
+                                    logger.info(f"Favorite toggled: {liked_state[0]}")
+                            else:
+                                liked_state[0] = not liked_state[0]
                             logger.info(f"Liked: {liked_state[0]}")
             
             # Clear renderer
@@ -519,6 +547,10 @@ def main():
             
             # Get latest now playing data
             now_playing_data = ac_client.get_current_data() if ac_client else None
+            
+            # Update liked state from API if not in demo mode
+            if now_playing_data and not args.demo:
+                liked_state[0] = now_playing_data.get('is_favorite', False)
             
             # Draw the Now Playing UI and get button positions
             button_rects[0] = draw_now_playing_ui(renderer, layout_width, layout_height, 
