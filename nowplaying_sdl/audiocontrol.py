@@ -200,19 +200,18 @@ class AudioControlClient:
         return self.error is None
     
     def check_favorites_support(self) -> bool:
-        """Check if favorites API is available
+        """Check if favorites API is available by checking providers
         
         Returns:
-            True if supported, False otherwise
+            True if supported (has enabled providers), False otherwise
         """
         # If we already checked, return cached result
         if self.favorites_supported is not None:
             return self.favorites_supported
         
         try:
-            # Try a simple query to see if endpoint exists
-            url = f"{self.api_url}/favourites/is_favourite?artist=test&title=test"
-            logger.debug(f"Testing favorites API: {url}")
+            url = f"{self.api_url}/favourites/providers"
+            logger.debug(f"Checking favorites providers: {url}")
             
             request = urllib.request.Request(
                 url,
@@ -220,10 +219,20 @@ class AudioControlClient:
             )
             
             with urllib.request.urlopen(request, timeout=5) as response:
-                # If we get a response (even if result is false), API is supported
-                self.favorites_supported = True
-                logger.info("Favorites API is available")
-                return True
+                data = response.read().decode('utf-8')
+                result = json.loads(data)
+                logger.debug(f"Favorites providers response: {result}")
+                
+                # Check if there are any enabled providers
+                enabled_count = result.get('enabled_count', 0)
+                if enabled_count > 0:
+                    self.favorites_supported = True
+                    logger.info(f"Favorites API is available ({enabled_count} provider(s) enabled)")
+                else:
+                    self.favorites_supported = False
+                    logger.info("Favorites API available but no providers enabled")
+                
+                return self.favorites_supported
                 
         except urllib.error.HTTPError as e:
             if e.code == 404:
@@ -231,11 +240,11 @@ class AudioControlClient:
                 logger.info("Favorites API not available (404) - feature disabled")
                 self.favorites_supported = False
             else:
-                logger.warning(f"HTTP error testing favorites API: {e.code} {e.reason}")
+                logger.warning(f"HTTP error checking favorites providers: {e.code} {e.reason}")
                 # Don't mark as unsupported for other errors
             return False
         except Exception as e:
-            logger.warning(f"Error testing favorites API: {e}")
+            logger.warning(f"Error checking favorites providers: {e}")
             return False
     
     def is_favorite(self, title: str, artist: str) -> bool:
