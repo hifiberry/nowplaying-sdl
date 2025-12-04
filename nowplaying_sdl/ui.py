@@ -172,7 +172,7 @@ def draw_circle_outline(renderer, physical_center_x, physical_center_y, physical
 def render_control_buttons(renderer, button_y, button_size, button_spacing, center_x, total_width,
                           prev_color, play_color, next_color, like_color,
                           font_icons_buttons, minimal_buttons, liked, no_control,
-                          rotation, screen_width, screen_height, border_radius=35):
+                          rotation, screen_width, screen_height, border_radius=35, hide_like_button=False):
     """Render control buttons (prev, play, next, like)
     
     Args:
@@ -190,6 +190,7 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         rotation: Screen rotation angle
         screen_width, screen_height: Physical screen dimensions
         border_radius: Border radius for button backgrounds (default 35)
+        hide_like_button: If True, don't render the like button
     
     Returns:
         Dict of button rectangles: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
@@ -197,23 +198,25 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
     button_rects = {}
     
     if no_control:
-        # Only show like button, centered
-        like_icon = "favorite" if liked else "favorite_border"
-        like_x = center_x - button_size // 2
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, border_radius, 
-                            *like_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, like_icon, 
-                               like_x + button_size // 2, button_y + button_size // 2, 
-                               255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, like_icon, 
-                               like_x + button_size // 2, button_y + button_size // 2, 
-                               *like_color, rotation, screen_width, screen_height)
-        button_rects['like'] = (like_x, button_y, button_size, button_size)
+        # Only show like button, centered (if not hidden)
+        if not hide_like_button:
+            like_icon = "favorite" if liked else "favorite_border"
+            like_x = center_x - button_size // 2
+            if not minimal_buttons:
+                draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, border_radius, 
+                                *like_color, 255, rotation, screen_width, screen_height)
+                render_text_centered(renderer, font_icons_buttons, like_icon, 
+                                   like_x + button_size // 2, button_y + button_size // 2, 
+                                   255, 255, 255, rotation, screen_width, screen_height)
+            else:
+                render_text_centered(renderer, font_icons_buttons, like_icon, 
+                                   like_x + button_size // 2, button_y + button_size // 2, 
+                                   *like_color, rotation, screen_width, screen_height)
+            button_rects['like'] = (like_x, button_y, button_size, button_size)
     else:
         # Calculate button positions to center them
-        total_buttons_width = button_size * 4 + button_spacing * 3
+        num_buttons = 3 if hide_like_button else 4
+        total_buttons_width = button_size * num_buttons + button_spacing * (num_buttons - 1)
         buttons_start_x = center_x - total_buttons_width // 2
         
         # Previous button
@@ -258,20 +261,21 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
                                *next_color, rotation, screen_width, screen_height)
         button_rects['next'] = (next_x, button_y, button_size, button_size)
         
-        # Like button
-        like_icon = "favorite" if liked else "favorite_border"
-        like_x = next_x + button_size + button_spacing
-        if not minimal_buttons:
-            draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, border_radius, 
-                            *like_color, 255, rotation, screen_width, screen_height)
-            render_text_centered(renderer, font_icons_buttons, like_icon, 
-                               like_x + button_size // 2, button_y + button_size // 2, 
-                               255, 255, 255, rotation, screen_width, screen_height)
-        else:
-            render_text_centered(renderer, font_icons_buttons, like_icon, 
-                               like_x + button_size // 2, button_y + button_size // 2, 
-                               *like_color, rotation, screen_width, screen_height)
-        button_rects['like'] = (like_x, button_y, button_size, button_size)
+        # Like button (if not hidden)
+        if not hide_like_button:
+            like_icon = "favorite" if liked else "favorite_border"
+            like_x = next_x + button_size + button_spacing
+            if not minimal_buttons:
+                draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, border_radius, 
+                                *like_color, 255, rotation, screen_width, screen_height)
+                render_text_centered(renderer, font_icons_buttons, like_icon, 
+                                   like_x + button_size // 2, button_y + button_size // 2, 
+                                   255, 255, 255, rotation, screen_width, screen_height)
+            else:
+                render_text_centered(renderer, font_icons_buttons, like_icon, 
+                                   like_x + button_size // 2, button_y + button_size // 2, 
+                                   *like_color, rotation, screen_width, screen_height)
+            button_rects['like'] = (like_x, button_y, button_size, button_size)
     
     return button_rects
 
@@ -345,7 +349,7 @@ def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, scr
             sdlttf.TTF_CloseFont(font_icons_large)
 
 
-def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None):
+def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False):
     """Draw the Now Playing UI in portrait orientation
     
     Args:
@@ -354,6 +358,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         demo: If True, use demo data; if False, use now_playing_data
         now_playing_data: Dict with artist, title, album, cover_url from AudioControl
         cover_cache: CoverArtCache instance for downloading cover art
+        hide_like_button: If True, don't render the like button
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
@@ -406,7 +411,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
         renderer, button_y, button_size, button_spacing, center_x, width,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=35
+        rotation, screen_width, screen_height, border_radius=35, hide_like_button=hide_like_button
     )
     
     if needs_font_cleanup:
@@ -415,7 +420,7 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     return button_rects
 
 
-def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None):
+def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False):
     """Draw the Now Playing UI in landscape orientation
     
     Args:
@@ -486,7 +491,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         renderer, button_y, button_size, button_spacing, content_center_x, content_width,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=40
+        rotation, screen_width, screen_height, border_radius=40, hide_like_button=hide_like_button
     )
     
     if needs_font_cleanup:
@@ -495,7 +500,7 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     return button_rects
 
 
-def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None):
+def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False):
     """Draw the Now Playing UI in circular layout mode
     
     Args:
@@ -566,7 +571,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
         renderer, button_y, button_size, button_spacing, circle_center_x, diameter,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35)
+        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button
     )
     
     if needs_font_cleanup:
@@ -575,7 +580,7 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
     return button_rects
 
 
-def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None):
+def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, hide_like_button=False):
     """Draw the Now Playing UI in circular layout mode with larger cover and smaller fonts
     
     Args:
@@ -685,7 +690,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
         renderer, button_y, button_size, button_spacing, circle_center_x, diameter,
         prev_color, play_color, next_color, like_color,
         font_icons_buttons, minimal_buttons, liked, no_control,
-        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35)
+        rotation, screen_width, screen_height, border_radius=int(button_size * 0.35), hide_like_button=hide_like_button
     )
     
     if needs_font_cleanup:

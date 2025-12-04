@@ -35,8 +35,7 @@ class AudioControlClient:
         self.previous_song = None
         self.previous_state = None
         self.favorites_supported = None  # None=unknown, True=supported, False=not supported
-        self.favorites_cache = None
-        self.favorites_cache_time = 0
+        self.favorites_cache = {}  # Dict of {"artist|title": {is_fav: bool, time: float}}
         
     def fetch_now_playing(self) -> Dict[str, Any]:
         """Fetch the current now playing information from the AudioControl API"""
@@ -175,7 +174,7 @@ class AudioControlClient:
             time.sleep(self.update_interval)
     
     def start(self):
-        """Start background polling"""
+        \"\"\"Start background polling\"\"\"
         if self.running:
             return
         
@@ -186,6 +185,9 @@ class AudioControlClient:
         # Do initial fetch synchronously
         raw_data = self.fetch_now_playing()
         self.current_data = self.format_now_playing(raw_data)
+        
+        # Check if favorites API is available
+        self.check_favorites_support()
     
     def stop(self):
         """Stop background polling"""
@@ -197,20 +199,20 @@ class AudioControlClient:
         """Check if connection is working"""
         return self.error is None
     
-    def get_favorites(self) -> Optional[Dict[str, Any]]:
-        """Get list of favorites from the API"""
-        # If we know favorites aren't supported, don't try
-        if self.favorites_supported is False:
-            return None
+    def check_favorites_support(self) -> bool:
+        """Check if favorites API is available
         
-        # Use cache if fresh (within 2 seconds)
-        current_time = time.time()
-        if self.favorites_cache and (current_time - self.favorites_cache_time) < 2.0:
-            return self.favorites_cache
+        Returns:
+            True if supported, False otherwise
+        """
+        # If we already checked, return cached result
+        if self.favorites_supported is not None:
+            return self.favorites_supported
         
         try:
-            url = f"{self.api_url}/favourites"
-            logger.debug(f"Fetching favorites from: {url}")
+            # Try a simple query to see if endpoint exists
+            url = f"{self.api_url}/favourites/is_favourite?artist=test&title=test"
+            logger.debug(f"Testing favorites API: {url}")
             
             request = urllib.request.Request(
                 url,
@@ -218,28 +220,23 @@ class AudioControlClient:
             )
             
             with urllib.request.urlopen(request, timeout=5) as response:
-                data = response.read().decode('utf-8')
-                result = json.loads(data)
-                logger.debug(f"Favorites response: {result}")
-                
-                # Mark as supported and cache result
+                # If we get a response (even if result is false), API is supported
                 self.favorites_supported = True
-                self.favorites_cache = result
-                self.favorites_cache_time = current_time
-                return result
+                logger.info("Favorites API is available")
+                return True
                 
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                # Favorites endpoint not available
-                if self.favorites_supported is None:
-                    logger.info("Favorites API not available (404) - feature disabled")
+                # Endpoint not available
+                logger.info("Favorites API not available (404) - feature disabled")
                 self.favorites_supported = False
             else:
-                logger.error(f"HTTP error fetching favorites: {e.code} {e.reason}")
-            return None
+                logger.warning(f"HTTP error testing favorites API: {e.code} {e.reason}")
+                # Don't mark as unsupported for other errors
+            return False
         except Exception as e:
-            logger.error(f"Error fetching favorites: {e}")
-            return None
+            logger.warning(f"Error testing favorites API: {e}")
+            return False
     
     def is_favorite(self, title: str, artist: str) -> bool:
         """Check if the current track is in favorites
@@ -258,16 +255,57 @@ class AudioControlClient:
         if not title or not artist:
             return False
         
-        favorites = self.get_favorites()
-        if not favorites or "favourites" not in favorites:
+        # Check cache first (valid for 2 seconds)
+        cache_key = f"{artist}|{title}"
+        current_time = time.time()
+        if self.favorites_cache and cache_key in self.favorites_cache:
+            cache_entry = self.favorites_cache[cache_key]
+            if current_time - cache_entry['time'] < 2.0:
+                return cache_entry['is_fav']
+        
+        try:
+            # URL encode the parameters
+            import urllib.parse
+            params = urllib.parse.urlencode({'artist': artist, 'title': title})
+            url = f"{self.api_url}/favourites/is_favourite?{params}"
+            logger.debug(f"Checking if favorite: {url}")
+            
+            request = urllib.request.Request(
+                url,
+                headers={'User-Agent': 'NowPlayingSDL/1.0'}
+            )
+            
+            with urllib.request.urlopen(request, timeout=5) as response:
+                data = response.read().decode('utf-8')
+                result = json.loads(data)
+                logger.debug(f"is_favourite response: {result}")
+                
+                # Mark as supported
+                self.favorites_supported = True
+                
+                # Parse response: {"Ok":{"is_favourite":false,"providers":[]}}
+                is_fav = False
+                if "Ok" in result and "is_favourite" in result["Ok"]:
+                    is_fav = result["Ok"]["is_favourite"]
+                
+                # Cache the result
+                if self.favorites_cache is None:
+                    self.favorites_cache = {}
+                self.favorites_cache[cache_key] = {'is_fav': is_fav, 'time': current_time}
+                
+                return is_fav
+                
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                if self.favorites_supported is None:
+                    logger.info("Favorites API not available (404) - feature disabled")
+                self.favorites_supported = False
+            else:
+                logger.error(f"HTTP error checking favorite: {e.code} {e.reason}")
             return False
-        
-        # Check if current track is in favorites list
-        for fav in favorites["favourites"]:
-            if fav.get("title") == title and fav.get("artist") == artist:
-                return True
-        
-        return False
+        except Exception as e:
+            logger.error(f"Error checking favorite: {e}")
+            return False
     
     def add_favorite(self, title: str, artist: str, album: str = None) -> bool:
         """Add current track to favorites
@@ -314,8 +352,10 @@ class AudioControlClient:
             
             with urllib.request.urlopen(request, timeout=5) as response:
                 logger.info(f"Added to favorites: {response.status}")
-                # Invalidate cache
-                self.favorites_cache = None
+                # Invalidate cache for this track
+                cache_key = f"{artist}|{title}"
+                if self.favorites_cache and cache_key in self.favorites_cache:
+                    del self.favorites_cache[cache_key]
                 self.favorites_supported = True
                 return response.status == 200
                 
@@ -373,8 +413,10 @@ class AudioControlClient:
             
             with urllib.request.urlopen(request, timeout=5) as response:
                 logger.info(f"Removed from favorites: {response.status}")
-                # Invalidate cache
-                self.favorites_cache = None
+                # Invalidate cache for this track
+                cache_key = f"{artist}|{title}"
+                if self.favorites_cache and cache_key in self.favorites_cache:
+                    del self.favorites_cache[cache_key]
                 self.favorites_supported = True
                 return response.status == 200
                 

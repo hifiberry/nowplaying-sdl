@@ -219,19 +219,22 @@ def get_display_info(display_index):
     return mode
 
 
-def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, is_circle=False, is_circle2=False):
+def draw_now_playing_ui(renderer, width, height, font_large, font_medium, font_small, font_icons, is_portrait, bw_buttons=False, no_control=False, minimal_buttons=False, liked=False, rotation=0, screen_width=0, screen_height=0, demo=False, now_playing_data=None, cover_cache=None, is_circle=False, is_circle2=False, hide_like_button=False):
     """Draw the Now Playing UI based on orientation or mode
+    
+    Args:
+        hide_like_button: If True, don't render the like button
     
     Returns button positions as dict: {'prev': (x,y,w,h), 'play': (x,y,w,h), ...}
     """
     if is_circle2:
-        return draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache)
+        return draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button)
     elif is_circle:
-        return draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache)
+        return draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button)
     elif is_portrait:
-        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache)
+        return draw_now_playing_ui_portrait(renderer, width, height, font_large, font_medium, font_small, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button)
     else:
-        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache)
+        return draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medium, font_icons, bw_buttons, no_control, minimal_buttons, liked, rotation, screen_width, screen_height, demo, now_playing_data, cover_cache, hide_like_button)
 
 
 def main():
@@ -472,10 +475,13 @@ def main():
         if now_playing_data and not args.demo:
             liked_state[0] = now_playing_data.get('is_favorite', False)
         
+        # Check if favorites are supported (hide like button if not)
+        hide_like = not args.demo and ac_client and ac_client.favorites_supported is False
+        
         button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
                           args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2)]
+                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like)]
         sdl2.SDL_RenderPresent(renderer)
         
         def check_button_hit(x, y):
@@ -552,11 +558,14 @@ def main():
             if now_playing_data and not args.demo:
                 liked_state[0] = now_playing_data.get('is_favorite', False)
             
+            # Check if favorites are supported (hide like button if not)
+            hide_like = not args.demo and ac_client and ac_client.favorites_supported is False
+            
             # Draw the Now Playing UI and get button positions
             button_rects[0] = draw_now_playing_ui(renderer, layout_width, layout_height, 
                               font_large, font_medium, font_small, font_icons, is_portrait, 
                               args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2)
+                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like)
             
             # Present the rendered frame
             sdl2.SDL_RenderPresent(renderer)
