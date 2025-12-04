@@ -38,6 +38,58 @@ def get_resource_path(filename):
     return str(module_dir / filename)
 
 
+def get_now_playing_data(demo, now_playing_data, cover_cache):
+    """Get now playing data from demo or API
+    
+    Args:
+        demo: If True, use demo data
+        now_playing_data: Dict with artist, title, album, cover_url from AudioControl
+        cover_cache: CoverArtCache instance for downloading cover art
+    
+    Returns:
+        Tuple of (cover_file, title, artist)
+    """
+    if demo:
+        cover_file = get_resource_path("demo_cover.jpg")
+        title = "Never Gonna Give You Up"
+        artist = "Rick Astley"
+    elif now_playing_data:
+        # Get cover art (download if needed)
+        cover_url = now_playing_data.get('cover_url')
+        cover_file = cover_cache.get_cover(cover_url) if cover_cache and cover_url else None
+        title = now_playing_data.get('title', '')
+        artist = now_playing_data.get('artist', '')
+    else:
+        cover_file = None
+        title = ""
+        artist = ""
+    
+    return cover_file, title, artist
+
+
+def get_button_colors(bw_buttons):
+    """Get button colors for UI layouts
+    
+    Args:
+        bw_buttons: If True, use grayscale colors
+    
+    Returns:
+        Tuple of (prev_color, play_color, next_color, like_color)
+    """
+    if bw_buttons:
+        prev_color = (80, 80, 80)
+        play_color = (80, 80, 80)
+        next_color = (80, 80, 80)
+        like_color = (80, 80, 80)
+    else:
+        prev_color = (60, 60, 60)
+        play_color = (30, 150, 30)
+        next_color = (60, 60, 60)
+        like_color = (200, 50, 50)
+    
+    return prev_color, play_color, next_color, like_color
+
+
 def render_coverart(renderer, x, y, size, imagefile, font_icons, rotation=0, screen_width=0, screen_height=0):
     """Render album cover art or placeholder
     
@@ -133,23 +185,8 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     
     button_rects = {}
     
-    # Determine data source
-    if demo:
-        cover_file = get_resource_path("demo_cover.jpg")
-        title = "Never Gonna Give You Up"
-        artist = "Rick Astley"
-    elif now_playing_data:
-        # Get cover art (download if needed)
-        cover_url = now_playing_data.get('cover_url')
-        logger.debug(f"Portrait layout - cover_url from API: {cover_url}")
-        cover_file = cover_cache.get_cover(cover_url) if cover_cache and cover_url else None
-        logger.debug(f"Portrait layout - cover_file resolved: {cover_file}")
-        title = now_playing_data.get('title', '')
-        artist = now_playing_data.get('artist', '')
-    else:
-        cover_file = None
-        title = ""
-        artist = ""
+    # Get now playing data
+    cover_file, title, artist = get_now_playing_data(demo, now_playing_data, cover_cache)
     
     # Render album cover
     render_coverart(renderer, cover_x, cover_y, cover_size, cover_file, font_icons, rotation, screen_width, screen_height)
@@ -172,17 +209,8 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     button_size = 90
     button_spacing = 20
     
-    # Determine button colors
-    if bw_buttons:
-        prev_color = (80, 80, 80)
-        play_color = (80, 80, 80)
-        next_color = (80, 80, 80)
-        like_color = (80, 80, 80)
-    else:
-        prev_color = (60, 60, 60)
-        play_color = (30, 150, 30)
-        next_color = (60, 60, 60)
-        like_color = (200, 50, 50)
+    # Get button colors
+    prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
     
     # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
     if minimal_buttons:
@@ -276,23 +304,8 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     
     button_rects = {}
     
-    # Determine data source
-    if demo:
-        cover_file = get_resource_path("demo_cover.jpg")
-        title = "Never Gonna Give You Up"
-        artist = "Rick Astley"
-    elif now_playing_data:
-        # Get cover art (download if needed)
-        cover_url = now_playing_data.get('cover_url')
-        logger.debug(f"Landscape layout - cover_url from API: {cover_url}")
-        cover_file = cover_cache.get_cover(cover_url) if cover_cache and cover_url else None
-        logger.debug(f"Landscape layout - cover_file resolved: {cover_file}")
-        title = now_playing_data.get('title', '')
-        artist = now_playing_data.get('artist', '')
-    else:
-        cover_file = None
-        title = ""
-        artist = ""
+    # Get now playing data
+    cover_file, title, artist = get_now_playing_data(demo, now_playing_data, cover_cache)
     
     # Render album cover
     render_coverart(renderer, cover_x, cover_y, cover_size, cover_file, font_icons, rotation, screen_width, screen_height)
@@ -332,17 +345,8 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     button_spacing = 25
     button_y = cover_y + cover_size - button_size + int(height * BUTTON_VERTICAL_OFFSET_PERCENT)
     
-    # Determine button colors
-    if bw_buttons:
-        prev_color = (80, 80, 80)
-        play_color = (80, 80, 80)
-        next_color = (80, 80, 80)
-        like_color = (80, 80, 80)
-    else:
-        prev_color = (60, 60, 60)
-        play_color = (30, 150, 30)
-        next_color = (60, 60, 60)
-        like_color = (200, 50, 50)
+    # Get button colors
+    prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
     
     # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
     if minimal_buttons:
@@ -448,21 +452,8 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
     
     button_rects = {}
     
-    # Determine data source
-    if demo:
-        cover_file = get_resource_path("demo_cover.jpg")
-        title = "Never Gonna Give You Up"
-        artist = "Rick Astley"
-    elif now_playing_data:
-        # Get cover art (download if needed)
-        cover_url = now_playing_data.get('cover_url')
-        cover_file = cover_cache.get_cover(cover_url) if cover_cache and cover_url else None
-        title = now_playing_data.get('title', '')
-        artist = now_playing_data.get('artist', '')
-    else:
-        cover_file = None
-        title = ""
-        artist = ""
+    # Get now playing data
+    cover_file, title, artist = get_now_playing_data(demo, now_playing_data, cover_cache)
     
     # Render album cover at the top
     render_coverart(renderer, cover_x, cover_y, cover_size, cover_file, font_icons, rotation, screen_width, screen_height)
@@ -498,11 +489,8 @@ def draw_now_playing_ui_circle(renderer, width, height, font_large, font_medium,
     button_spacing = int(diameter * 0.03)  # 3% of diameter
     button_y = circle_center_y + int(diameter * 0.32)  # Move buttons 3% up (was 0.35, now 0.32)
     
-    # Colors
-    prev_color = (200, 200, 200) if bw_buttons else (100, 149, 237)
-    play_color = (80, 80, 80) if bw_buttons else (50, 205, 50)
-    next_color = (200, 200, 200) if bw_buttons else (100, 149, 237)
-    like_color = (150, 150, 150) if bw_buttons else (255, 105, 180)
+    # Get button colors
+    prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
     
     # Load larger icon font if minimal buttons (use regular MaterialIcons for thinner lines)
     if minimal_buttons:
@@ -608,21 +596,8 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     
     button_rects = {}
     
-    # Determine data source
-    if demo:
-        cover_file = get_resource_path("demo_cover.jpg")
-        title = "Never Gonna Give You Up"
-        artist = "Rick Astley"
-    elif now_playing_data:
-        # Get cover art (download if needed)
-        cover_url = now_playing_data.get('cover_url')
-        cover_file = cover_cache.get_cover(cover_url) if cover_cache and cover_url else None
-        title = now_playing_data.get('title', '')
-        artist = now_playing_data.get('artist', '')
-    else:
-        cover_file = None
-        title = ""
-        artist = ""
+    # Get now playing data
+    cover_file, title, artist = get_now_playing_data(demo, now_playing_data, cover_cache)
     
     # Render album cover at the top
     render_coverart(renderer, cover_x, cover_y, cover_size, cover_file, font_icons, rotation, screen_width, screen_height)
@@ -697,11 +672,8 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     button_spacing = int(diameter * 0.03)  # 3% of diameter
     button_y = circle_center_y + int(diameter * 0.32)  # Move buttons 3% up
     
-    # Colors
-    prev_color = (200, 200, 200) if bw_buttons else (100, 149, 237)
-    play_color = (80, 80, 80) if bw_buttons else (50, 205, 50)
-    next_color = (200, 200, 200) if bw_buttons else (100, 149, 237)
-    like_color = (150, 150, 150) if bw_buttons else (255, 105, 180)
+    # Get button colors
+    prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
     
     # Load larger icon font if minimal buttons
     if minimal_buttons:
