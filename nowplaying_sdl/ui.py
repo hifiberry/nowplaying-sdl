@@ -206,10 +206,6 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         if not hide_like_button:
             like_icon = "favorite" if liked else "favorite_border"
             like_x = center_x - button_size // 2
-            center_x_btn = like_x + button_size // 2
-            center_y_btn = button_y + button_size // 2
-            logger.info(f"Rendering like button: icon={like_icon}, x={like_x}, y={button_y}, size={button_size}, minimal={minimal_buttons}, color={like_color}")
-            logger.info(f"Button center: ({center_x_btn}, {center_y_btn}), rotation={rotation}, screen={screen_width}x{screen_height}")
             if not minimal_buttons:
                 draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, border_radius, 
                                 *like_color, 255, rotation, screen_width, screen_height)
@@ -839,7 +835,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     # Control buttons at the bottom of the circle
     button_size = int(diameter * 0.12)  # 12% of diameter
     button_spacing = int(diameter * 0.03)  # 3% of diameter
-    button_y = circle_center_y + int(diameter * 0.32)  # Move buttons 3% up
+    button_y = circle_center_y + int(diameter * 0.32) + 15  # Move buttons down
     
     # Get button colors
     prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)

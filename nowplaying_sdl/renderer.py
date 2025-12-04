@@ -304,19 +304,12 @@ def render_text_centered(renderer, font, text, center_x, center_y, r, g, b, rota
         rotation: Rotation angle in degrees (0, 90, 180, 270)
         screen_width, screen_height: Screen dimensions (required for rotation)
     """
-    import logging
-    logger = logging.getLogger(__name__)
-    
     color = sdl2.SDL_Color(r, g, b, 255)
     surface = sdlttf.TTF_RenderUTF8_Blended(font, text.encode('utf-8'), color)
     if not surface:
-        logger.warning(f"Failed to render text '{text}' at ({center_x}, {center_y}): {sdlttf.TTF_GetError().decode('utf-8')}")
         return
     
     texture = sdl2.SDL_CreateTextureFromSurface(renderer, surface)
-    if not texture:
-        error_msg = sdl2.SDL_GetError().decode('utf-8') if sdl2.SDL_GetError() else "Unknown error"
-        logger.warning(f"Failed to create texture for text '{text}': {error_msg}, surface size={surface.contents.w}x{surface.contents.h}")
     if texture:
         if rotation != 0:
             # Input center_x, center_y are in layout coordinates
@@ -351,14 +344,9 @@ def render_text_centered(renderer, font, text, center_x, center_y, r, g, b, rota
             x = center_x - surface.contents.w // 2
             y = center_y - surface.contents.h // 2
             rect = sdl2.SDL_Rect(x, y, surface.contents.w, surface.contents.h)
-            if text in ['favorite', 'favorite_border']:
-                logger.info(f"Drawing '{text}' texture at ({x}, {y}) size=({surface.contents.w}x{surface.contents.h})")
             sdl2.SDL_RenderCopy(renderer, texture, None, rect)
         
         sdl2.SDL_DestroyTexture(texture)
-    else:
-        if text in ['favorite', 'favorite_border']:
-            logger.warning(f"Failed to create texture for '{text}'")
     
     sdl2.SDL_FreeSurface(surface)
 
