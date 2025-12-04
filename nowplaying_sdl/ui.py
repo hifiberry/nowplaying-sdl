@@ -207,6 +207,7 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         if not hide_like_button:
             like_icon = "favorite" if liked else "favorite_border"
             like_x = center_x - button_size // 2
+            logger.info(f"Rendering like button: icon={like_icon}, x={like_x}, y={button_y}, size={button_size}, minimal={minimal_buttons}, color={like_color}")
             if not minimal_buttons:
                 draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, border_radius, 
                                 *like_color, 255, rotation, screen_width, screen_height)
