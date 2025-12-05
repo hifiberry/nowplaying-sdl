@@ -78,10 +78,10 @@ def get_button_colors(bw_buttons):
         Tuple of (prev_color, play_color, next_color, like_color)
     """
     if bw_buttons:
-        prev_color = (80, 80, 80)
-        play_color = (80, 80, 80)
-        next_color = (80, 80, 80)
-        like_color = (80, 80, 80)
+        prev_color = (40, 40, 40)
+        play_color = (40, 40, 40)
+        next_color = (40, 40, 40)
+        like_color = (40, 40, 40)
     else:
         prev_color = (60, 60, 60)
         play_color = (30, 150, 30)
@@ -103,12 +103,11 @@ def get_button_icon_font(minimal_buttons, font_icons, size_multiplier=1.5):
         Tuple of (font_icons_buttons, needs_cleanup) where needs_cleanup indicates if font should be closed later
     """
     if minimal_buttons:
-        if isinstance(size_multiplier, float) and size_multiplier < 1.0:
-            # This is actually a button_size ratio (e.g., button_size * 0.6)
-            font_size = int(size_multiplier)
-        else:
-            # This is a fixed multiplier (e.g., 48 * 1.5)
-            font_size = int(48 * size_multiplier)
+        # size_multiplier is the actual font size (e.g., button_size * 0.6 = 51.6)
+        font_size = int(size_multiplier)
+        # Ensure minimum font size
+        if font_size < 12:
+            font_size = 12
         font_icons_buttons = sdlttf.TTF_OpenFont(get_resource_path("fonts/MaterialIcons-Regular.ttf").encode("utf-8"), font_size)
         return font_icons_buttons, True
     else:
@@ -207,15 +206,17 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
         if not hide_like_button:
             like_icon = "favorite" if liked else "favorite_border"
             like_x = center_x - button_size // 2
+            center_x_btn = like_x + button_size // 2
+            center_y_btn = button_y + button_size // 2
             if not minimal_buttons:
                 draw_rounded_rect(renderer, like_x, button_y, button_size, button_size, border_radius, 
                                 *like_color, 255, rotation, screen_width, screen_height)
                 render_text_centered(renderer, font_icons_buttons, like_icon, 
-                                   like_x + button_size // 2, button_y + button_size // 2, 
+                                   center_x_btn, center_y_btn, 
                                    255, 255, 255, rotation, screen_width, screen_height)
             else:
                 render_text_centered(renderer, font_icons_buttons, like_icon, 
-                                   like_x + button_size // 2, button_y + button_size // 2, 
+                                   center_x_btn, center_y_btn, 
                                    *like_color, rotation, screen_width, screen_height)
             button_rects['like'] = (like_x, button_y, button_size, button_size)
     else:
@@ -818,7 +819,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     
     # Move text down to account for larger cover
     text_offset = int(diameter * 0.05)  # 5% down (reduced to shift text up)
-    title_y = cover_y + cover_size + 20 + text_offset  # Below the cover + offset
+    title_y = cover_y + cover_size + 20 + text_offset - 10  # Below the cover + offset, moved 10px up
     for i, line in enumerate(wrapped_title):
         render_text_centered(renderer, font_large_small, line, circle_center_x, title_y + i * 48, 30, 30, 30, rotation, screen_width, screen_height)
     
@@ -838,7 +839,7 @@ def draw_now_playing_ui_circle2(renderer, width, height, font_large, font_medium
     # Control buttons at the bottom of the circle
     button_size = int(diameter * 0.12)  # 12% of diameter
     button_spacing = int(diameter * 0.03)  # 3% of diameter
-    button_y = circle_center_y + int(diameter * 0.32)  # Move buttons 3% up
+    button_y = circle_center_y + int(diameter * 0.32) + 15  # Move buttons down
     
     # Get button colors
     prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)

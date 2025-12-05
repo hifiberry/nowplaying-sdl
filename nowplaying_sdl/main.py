@@ -562,8 +562,8 @@ def main():
         if now_playing_data and not args.demo:
             volume_state[0] = now_playing_data.get('volume', 50)
         
-        # Check if favorites are supported (hide like button if not)
-        hide_like = not args.demo and ac_client and ac_client.favorites_supported is False
+        # Check if favorites are supported (hide like button if not, unless no_control mode where we ONLY show like button)
+        hide_like = not args.demo and ac_client and ac_client.favorites_supported is False and not args.no_control
         
         button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
                           font_large, font_medium, font_small, font_icons, is_portrait, 
@@ -705,8 +705,8 @@ def main():
                 liked_state[0] = now_playing_data.get('is_favorite', False)
                 volume_state[0] = now_playing_data.get('volume', volume_state[0])
             
-            # Check if favorites are supported (hide like button if not)
-            hide_like = not args.demo and ac_client and ac_client.favorites_supported is False
+            # Check if favorites are supported (hide like button if not, unless no_control mode where we ONLY show like button)
+            hide_like = not args.demo and ac_client and ac_client.favorites_supported is False and not args.no_control
             
             # Draw the Now Playing UI and get button positions
             button_rects[0] = draw_now_playing_ui(renderer, layout_width, layout_height, 
