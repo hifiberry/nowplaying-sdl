@@ -481,14 +481,15 @@ def draw_now_playing_ui_portrait(renderer, width, height, font_large, font_mediu
     
     # Control buttons area
     button_y = content_y + title_height + 150
-    button_size = 90
-    button_spacing = 20
+    button_size = 120
+    button_spacing = 15
     
     # Get button colors
     prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
     
-    # Load icon font for buttons
-    font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, 1.5)
+    # Load icon font for buttons - scale with button size
+    button_font_size = int(button_size * 0.6)  # Icons are 60% of button size
+    font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, button_font_size)
     
     # Render control buttons
     button_rects = render_control_buttons(
@@ -539,8 +540,8 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         is_playing = state == 'playing'
     
     # Layout customization constants
-    TEXT_VERTICAL_OFFSET_PERCENT = 0.10  # Move text down by 10% of height
-    BUTTON_VERTICAL_OFFSET_PERCENT = -0.10  # Move buttons up by 10% of height (negative = up)
+    TEXT_VERTICAL_OFFSET_PERCENT = 0.05  # Move text down by 10% of height
+    BUTTON_VERTICAL_OFFSET_PERCENT = -0.05  # Move buttons up by 10% of height (negative = up)
     
     # Clear screen to light gray background
     sdl2.SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255)
@@ -570,20 +571,20 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     max_text_width = int(width * 0.4)
     wrapped_title = wrap_and_truncate_text(font_large, title, max_text_width, 2)
     
-    title_y = content_y + 28 + int(height * TEXT_VERTICAL_OFFSET_PERCENT)
+    title_y = content_y + 10 + int(height * TEXT_VERTICAL_OFFSET_PERCENT)
     for i, line in enumerate(wrapped_title):
         render_text_centered(renderer, font_large, line, content_center_x, title_y + i * 60, 30, 30, 30, rotation, screen_width, screen_height)
     
     # Artist name (centered) - wrap to max 40% display width
     wrapped_artist = wrap_and_truncate_text(font_medium, artist, max_text_width, 2)
     
-    artist_y = content_y + 105 + (len(wrapped_title) - 1) * 60 + int(height * TEXT_VERTICAL_OFFSET_PERCENT)
+    artist_y = content_y + 80 + (len(wrapped_title) - 1) * 60 + int(height * TEXT_VERTICAL_OFFSET_PERCENT)
     for i, line in enumerate(wrapped_artist):
         render_text_centered(renderer, font_medium, line, content_center_x, artist_y + i * 50, 100, 100, 100, rotation, screen_width, screen_height)
     
     # Control buttons area - position based on whether volume slider is shown
-    button_size = 100
-    button_spacing = 25
+    button_size = 130
+    button_spacing = 0
     
     # If volume slider is enabled, move buttons up to make room
     if volume_slider:
@@ -602,8 +603,9 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
     # Get button colors
     prev_color, play_color, next_color, like_color = get_button_colors(bw_buttons)
     
-    # Load icon font for buttons
-    font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, 1.5)
+    # Load icon font for buttons - scale with button size
+    button_font_size = int(button_size * 0.6)  # Icons are 60% of button size
+    font_icons_buttons, needs_font_cleanup = get_button_icon_font(minimal_buttons, font_icons, button_font_size)
     
     # Render control buttons
     button_rects = render_control_buttons(
