@@ -295,7 +295,8 @@ def main():
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        datefmt='%Y-%m-%d %H:%M:%S',
+        force=True
     )
     
     logger.info(f"Starting nowplaying-sdl (log level: {'DEBUG' if args.debug else 'INFO'})")
@@ -333,27 +334,9 @@ def main():
     if not args.volume_slider:
         args.volume_slider = config.get_bool('volume_slider')
     
-    # Load screensaver settings from config if not specified on command line
-    if args.screensaver_brightness_off == 0:  # Default value, check config
-        config_val = config.get_int('screensaver_brightness_off')
-        if config_val is not None:
-            args.screensaver_brightness_off = config_val
-    if args.screensaver_brightness_dimmed == 5:  # Default value, check config
-        config_val = config.get_int('screensaver_brightness_dimmed')
-        if config_val is not None:
-            args.screensaver_brightness_dimmed = config_val
-    if args.screensaver_brightness_on == 16:  # Default value, check config
-        config_val = config.get_int('screensaver_brightness_on')
-        if config_val is not None:
-            args.screensaver_brightness_on = config_val
-    if args.screensaver_dimming == 60:  # Default value, check config
-        config_dimming = config.get_int('screensaver_dimming')
-        if config_dimming is not None:
-            args.screensaver_dimming = config_dimming
-    if args.screensaver_off == 600:  # Default value, check config
-        config_off = config.get_int('screensaver_off')
-        if config_off is not None:
-            args.screensaver_off = config_off
+    # Screensaver settings: command-line args take precedence over config
+    # For these settings, we don't load from config since they all have reasonable defaults
+    # and command-line args should always be respected
     
     # Initialize SDL
     if sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO) != 0:
@@ -373,7 +356,7 @@ def main():
         sdlttf.TTF_Quit()
         sdl2.SDL_Quit()
         return 1
-    
+
     try:
         # Get number of displays
         num_displays = sdl2.SDL_GetNumVideoDisplays()
@@ -565,11 +548,15 @@ def main():
         # Check if favorites are supported (hide like button if not, unless no_control mode where we ONLY show like button)
         hide_like = not args.demo and ac_client and ac_client.favorites_supported is False and not args.no_control
         
-        button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
-                          font_large, font_medium, font_small, font_icons, is_portrait, 
-                          args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
-                          args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug, args.left_button, args.volume_slider, volume_state[0])]
-        sdl2.SDL_RenderPresent(renderer)
+        try:
+            button_rects = [draw_now_playing_ui(renderer, layout_width, layout_height, 
+                              font_large, font_medium, font_small, font_icons, is_portrait, 
+                              args.bw_buttons, args.no_control, args.minimal_buttons, liked_state[0], 
+                              args.rotation, display_mode.w, display_mode.h, args.demo, now_playing_data, cover_cache, is_circle, is_circle2, hide_like, args.round_controls, args.debug, args.left_button, args.volume_slider, volume_state[0])]
+            sdl2.SDL_RenderPresent(renderer)
+        except Exception as e:
+            logger.error(f"Error drawing initial UI: {e}", exc_info=True)
+            return 1
         
         def check_button_hit(x, y):
             """Check if coordinates hit any button, return button name or None"""
@@ -581,6 +568,8 @@ def main():
                     return button_name
             return None
         
+        logger.info("Entering main event loop")
+
         while running:
             # Handle events
             while sdl2.SDL_PollEvent(event) != 0:
@@ -592,6 +581,7 @@ def main():
                         running = False
                 elif event.type == sdl2.SDL_FINGERDOWN:
                     # Reset activity timer on touch
+                    logger.info(f"Touch event detected at ({event.tfinger.x:.3f}, {event.tfinger.y:.3f})")
                     screensaver.reset_activity()
                     # Touch coordinates are normalized (0.0-1.0)
                     touch_x = int(event.tfinger.x * display_mode.w)
@@ -640,6 +630,7 @@ def main():
                             logger.info(f"Liked: {liked_state[0]}")
                 elif event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                     # Reset activity timer on mouse click
+                    logger.info(f"Mouse click detected at ({event.button.x}, {event.button.y})")
                     screensaver.reset_activity()
                     # Mouse coordinates are in pixels
                     button = check_button_hit(event.button.x, event.button.y)

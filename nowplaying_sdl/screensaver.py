@@ -26,8 +26,8 @@ class Screensaver:
         self.brightness_off = brightness_off
         self.brightness_dimmed = brightness_dimmed
         self.brightness_on = brightness_on
-        self.dimming_timeout = dimming_timeout
-        self.off_timeout = off_timeout
+        self.dimming_timeout = max(5, dimming_timeout)  # Minimum 5 seconds
+        self.off_timeout = max(self.dimming_timeout + 5, off_timeout)  # Must be at least 5s after dimming
         
         self.backlight_device = self._find_backlight_device()
         self.current_brightness = None
@@ -35,6 +35,8 @@ class Screensaver:
         
         if self.backlight_device:
             logger.info(f"Backlight device found: {self.backlight_device}")
+            logger.info(f"Screensaver config: brightness_on={self.brightness_on}, brightness_dimmed={self.brightness_dimmed}, brightness_off={self.brightness_off}")
+            logger.info(f"Screensaver timings: dimming_timeout={self.dimming_timeout}s, off_timeout={self.off_timeout}s")
             self.set_brightness(self.brightness_on)
         else:
             logger.warning("No backlight device found - screensaver will not work")
@@ -77,8 +79,13 @@ class Screensaver:
     
     def reset_activity(self):
         """Reset the inactivity timer (call on user interaction)"""
+        logger.info("User activity detected, resetting screensaver timer")
+        old_time = self.last_activity_time
         self.last_activity_time = time.time()
+        logger.info(f"Activity timer reset (was {time.time() - old_time:.1f}s ago)")
         # Always restore full brightness on activity
+        if self.current_brightness != self.brightness_on:
+            logger.info(f"Restoring brightness to {self.brightness_on}")
         self.set_brightness(self.brightness_on)
     
     def update(self, is_playing=False):
@@ -92,6 +99,10 @@ class Screensaver:
         """
         if self.backlight_device is None:
             return self.brightness_on
+        
+        # Reset activity timer if playing
+        if is_playing:
+            self.last_activity_time = time.time()
         
         current_time = time.time()
         idle_time = current_time - self.last_activity_time
@@ -110,8 +121,13 @@ class Screensaver:
         
         # Update backlight if changed
         if target_brightness != self.current_brightness:
+            if target_brightness == self.brightness_dimmed:
+                logger.info(f"Dimming display to {target_brightness} after {idle_time:.0f}s of inactivity")
+            elif target_brightness == self.brightness_off:
+                logger.info(f"Turning off display (brightness={target_brightness}) after {idle_time:.0f}s of inactivity (playback stopped)")
+            else:
+                logger.info(f"Backlight changed to {target_brightness} (idle: {idle_time:.0f}s, playing: {is_playing})")
             self.set_brightness(target_brightness)
-            logger.info(f"Backlight changed to {self.current_brightness} (idle: {idle_time:.0f}s, playing: {is_playing})")
         
         return self.current_brightness
     

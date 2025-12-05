@@ -339,16 +339,6 @@ def render_control_buttons(renderer, button_y, button_size, button_spacing, cent
                                    *like_color, rotation, screen_width, screen_height)
             button_rects['like'] = (like_x, button_y, button_size, button_size)
     
-    # Debug output
-    if debug:
-        print("\n=== Button Positions Debug ===")
-        for button_name, rect in button_rects.items():
-            print(f"{button_name}: x={rect[0]}, y={rect[1]}, w={rect[2]}, h={rect[3]}")
-        print(f"Center X: {center_x}")
-        print(f"Total Width: {total_width}")
-        print(f"Buttons Start X: {buttons_start_x if not no_control else 'N/A'}")
-        print("============================\n")
-    
     # Draw circles around buttons if round_controls is enabled
     if round_controls:
         from .renderer import draw_circle
