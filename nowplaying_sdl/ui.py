@@ -601,7 +601,9 @@ def draw_now_playing_ui_landscape(renderer, width, height, font_large, font_medi
         slider_spacing = 40  # Space between buttons and slider
         total_controls_height = button_size + slider_spacing + slider_height
         # Position buttons so the slider ends at the bottom of the cover
-        button_y = cover_y + cover_size - total_controls_height + int(height * BUTTON_VERTICAL_OFFSET_PERCENT)
+        # For rotation 90, move buttons down 20px to better align with slider
+        button_offset = 20 if rotation == 90 else 0
+        button_y = cover_y + cover_size - total_controls_height + int(height * BUTTON_VERTICAL_OFFSET_PERCENT) + button_offset
     else:
         # Normal positioning - align bottom of buttons with bottom of cover
         button_y = cover_y + cover_size - button_size + int(height * BUTTON_VERTICAL_OFFSET_PERCENT)

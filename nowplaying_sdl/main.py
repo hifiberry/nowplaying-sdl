@@ -15,6 +15,7 @@ from pathlib import Path
 from .audiocontrol import AudioControlClient
 from .config import Config
 from .coverart import CoverArtCache
+from .screensaver import Screensaver
 from .renderer import (
     draw_circle,
     draw_rounded_rect,
@@ -32,8 +33,6 @@ from .ui import (
 )
 
 logger = logging.getLogger(__name__)
-
-
 
 
 def get_resource_path(filename):
@@ -222,6 +221,36 @@ def parse_arguments():
         default='none',
         help='Left button mode: none (removed), empty (no icon), lyrics, random, or loop (default: none)'
     )
+    parser.add_argument(
+        '--screensaver-brightness-off',
+        type=int,
+        default=0,
+        help='Brightness level when display is off (default: 0)'
+    )
+    parser.add_argument(
+        '--screensaver-brightness-dimmed',
+        type=int,
+        default=5,
+        help='Brightness level when display is dimmed (default: 5)'
+    )
+    parser.add_argument(
+        '--screensaver-brightness-on',
+        type=int,
+        default=16,
+        help='Brightness level when display is fully on (default: 16)'
+    )
+    parser.add_argument(
+        '--screensaver-dimming',
+        type=int,
+        default=60,
+        help='Seconds of inactivity before dimming display (default: 60)'
+    )
+    parser.add_argument(
+        '--screensaver-off',
+        type=int,
+        default=600,
+        help='Seconds of inactivity before turning off display when stopped (default: 600)'
+    )
     return parser.parse_args()
 
 
@@ -303,6 +332,28 @@ def main():
         args.demo = config.get_bool('demo')
     if not args.volume_slider:
         args.volume_slider = config.get_bool('volume_slider')
+    
+    # Load screensaver settings from config if not specified on command line
+    if args.screensaver_brightness_off == 0:  # Default value, check config
+        config_val = config.get_int('screensaver_brightness_off')
+        if config_val is not None:
+            args.screensaver_brightness_off = config_val
+    if args.screensaver_brightness_dimmed == 5:  # Default value, check config
+        config_val = config.get_int('screensaver_brightness_dimmed')
+        if config_val is not None:
+            args.screensaver_brightness_dimmed = config_val
+    if args.screensaver_brightness_on == 16:  # Default value, check config
+        config_val = config.get_int('screensaver_brightness_on')
+        if config_val is not None:
+            args.screensaver_brightness_on = config_val
+    if args.screensaver_dimming == 60:  # Default value, check config
+        config_dimming = config.get_int('screensaver_dimming')
+        if config_dimming is not None:
+            args.screensaver_dimming = config_dimming
+    if args.screensaver_off == 600:  # Default value, check config
+        config_off = config.get_int('screensaver_off')
+        if config_off is not None:
+            args.screensaver_off = config_off
     
     # Initialize SDL
     if sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO) != 0:
@@ -473,6 +524,15 @@ def main():
         cover_cache = CoverArtCache()
         logger.info(f"Cover art cache initialized at: {cover_cache.cache_dir}")
         
+        # Initialize screensaver
+        screensaver = Screensaver(
+            brightness_off=args.screensaver_brightness_off,
+            brightness_dimmed=args.screensaver_brightness_dimmed,
+            brightness_on=args.screensaver_brightness_on,
+            dimming_timeout=args.screensaver_dimming,
+            off_timeout=args.screensaver_off
+        )
+        
         # Main loop
         running = True
         event = sdl2.SDL_Event()
@@ -531,6 +591,8 @@ def main():
                     if event.key.keysym.sym in (sdl2.SDLK_ESCAPE, sdl2.SDLK_q):
                         running = False
                 elif event.type == sdl2.SDL_FINGERDOWN:
+                    # Reset activity timer on touch
+                    screensaver.reset_activity()
                     # Touch coordinates are normalized (0.0-1.0)
                     touch_x = int(event.tfinger.x * display_mode.w)
                     touch_y = int(event.tfinger.y * display_mode.h)
@@ -577,6 +639,8 @@ def main():
                                 liked_state[0] = not liked_state[0]
                             logger.info(f"Liked: {liked_state[0]}")
                 elif event.type == sdl2.SDL_MOUSEBUTTONDOWN:
+                    # Reset activity timer on mouse click
+                    screensaver.reset_activity()
                     # Mouse coordinates are in pixels
                     button = check_button_hit(event.button.x, event.button.y)
                     if button:
@@ -621,11 +685,20 @@ def main():
                                 liked_state[0] = not liked_state[0]
                             logger.info(f"Liked: {liked_state[0]}")
             
-            # Clear renderer
-            sdl2.SDL_RenderClear(renderer)
-            
             # Get latest now playing data
             now_playing_data = ac_client.get_current_data() if ac_client else None
+            
+            # Determine if playback is active
+            is_playing = False
+            if now_playing_data and not args.demo:
+                state = now_playing_data.get('state', '').lower()
+                is_playing = state == 'playing'
+            
+            # Update screensaver state
+            screensaver.update(is_playing)
+            
+            # Clear renderer
+            sdl2.SDL_RenderClear(renderer)
             
             # Update liked state from API if not in demo mode
             if now_playing_data and not args.demo:
