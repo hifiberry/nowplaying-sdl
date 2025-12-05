@@ -306,37 +306,55 @@ def main():
     
     # Merge command-line args with config (args take precedence)
     # Apply config defaults where args are not specified
-    if args.display is None:
-        args.display = config.get_int('display')
-    if args.rotation is None:
-        args.rotation = config.get_int('rotation')
     if args.api_url is None:
         args.api_url = config.get('api_url')
-    if not args.portrait and not args.landscape and not args.circle and not args.circle2:
-        if config.get_bool('circle2'):
-            args.circle2 = True
-        elif config.get_bool('circle'):
-            args.circle = True
-        elif config.get_bool('portrait'):
-            args.portrait = True
-        elif config.get_bool('landscape'):
-            args.landscape = True
-    if not args.bw_buttons:
-        args.bw_buttons = config.get_bool('bw_buttons')
-    if not args.no_control:
-        args.no_control = config.get_bool('no_control')
-    if not args.minimal_buttons:
-        args.minimal_buttons = config.get_bool('minimal_buttons')
-    if not args.liked:
-        args.liked = config.get_bool('liked')
+    if args.poll_interval == 2.0:
+        args.poll_interval = config.get_float('poll_interval')
     if not args.demo:
         args.demo = config.get_bool('demo')
+    
+    # Display settings from [display] section
+    if args.display is None:
+        args.display = config.get_int('display', 'display')
+    if args.rotation is None:
+        args.rotation = config.get_int('rotation', 'display')
+    
+    # UI settings from [ui] section
+    if not args.portrait and not args.landscape and not args.circle and not args.circle2:
+        if config.get_bool('circle2', 'ui'):
+            args.circle2 = True
+        elif config.get_bool('circle', 'ui'):
+            args.circle = True
+        elif config.get_bool('portrait', 'ui'):
+            args.portrait = True
+        elif config.get_bool('landscape', 'ui'):
+            args.landscape = True
+    if not args.bw_buttons:
+        args.bw_buttons = config.get_bool('bw_buttons', 'ui')
+    if not args.no_control:
+        args.no_control = config.get_bool('no_control', 'ui')
+    if not args.minimal_buttons:
+        args.minimal_buttons = config.get_bool('minimal_buttons', 'ui')
+    if not args.liked:
+        args.liked = config.get_bool('liked', 'ui')
     if not args.volume_slider:
-        args.volume_slider = config.get_bool('volume_slider')
+        args.volume_slider = config.get_bool('volume_slider', 'ui')
+    if not args.round_controls:
+        args.round_controls = config.get_bool('round_controls', 'ui')
+    if args.left_button == 'none':
+        args.left_button = config.get('left_button', 'ui')
     
     # Screensaver settings: command-line args take precedence over config
-    # For these settings, we don't load from config since they all have reasonable defaults
-    # and command-line args should always be respected
+    if args.screensaver_brightness_off == 0:
+        args.screensaver_brightness_off = config.get_int('brightness_off', 'screensaver')
+    if args.screensaver_brightness_dimmed == 5:
+        args.screensaver_brightness_dimmed = config.get_int('brightness_dimmed', 'screensaver')
+    if args.screensaver_brightness_on == 16:
+        args.screensaver_brightness_on = config.get_int('brightness_on', 'screensaver')
+    if args.screensaver_dimming == 60:
+        args.screensaver_dimming = config.get_int('dimming', 'screensaver')
+    if args.screensaver_off == 600:
+        args.screensaver_off = config.get_int('off', 'screensaver')
     
     # Initialize SDL
     if sdl2.SDL_Init(sdl2.SDL_INIT_VIDEO) != 0:

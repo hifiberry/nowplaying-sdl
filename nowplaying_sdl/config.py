@@ -21,16 +21,36 @@ class Config:
     
     # Default values
     DEFAULTS = {
-        'display': '0',
-        'rotation': '0',
         'api_url': 'http://localhost:1080/api',
+        'poll_interval': '2.0',
+        'demo': 'false'
+    }
+    
+    DISPLAY_DEFAULTS = {
+        'display': '0',
+        'rotation': '0'
+    }
+    
+    UI_DEFAULTS = {
         'portrait': 'false',
         'landscape': 'false',
+        'circle': 'false',
+        'circle2': 'false',
         'bw_buttons': 'false',
         'no_control': 'false',
         'minimal_buttons': 'false',
-        'liked': 'false',
-        'demo': 'false'
+        'round_controls': 'false',
+        'volume_slider': 'false',
+        'left_button': 'none',
+        'liked': 'false'
+    }
+    
+    SCREENSAVER_DEFAULTS = {
+        'brightness_off': '0',
+        'brightness_dimmed': '5',
+        'brightness_on': '16',
+        'dimming': '60',
+        'off': '600'
     }
     
     def __init__(self, config_file: Optional[str] = None):
@@ -63,12 +83,6 @@ class Config:
         if os.path.exists(user_config):
             return user_config
         
-        # Check system config as fallback
-        if os.path.exists(self.SYSTEM_CONFIG):
-            return self.SYSTEM_CONFIG
-        
-        return None
-    
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from file"""
         config = configparser.ConfigParser()
@@ -76,11 +90,26 @@ class Config:
         # Set defaults
         config['DEFAULT'] = self.DEFAULTS
         
+        # Create display section with defaults
+        config['display'] = self.DISPLAY_DEFAULTS.copy()
+        
+        # Create ui section with defaults
+        config['ui'] = self.UI_DEFAULTS.copy()
+        
+        # Create screensaver section with defaults
+        config['screensaver'] = self.SCREENSAVER_DEFAULTS.copy()
+        
         if self.config_file:
             try:
                 config.read(self.config_file)
                 logger.info(f"Loaded config from: {self.config_file}")
             except Exception as e:
+                logger.error(f"Error reading config file {self.config_file}: {e}")
+        
+        return configception as e:
+                logger.error(f"Error reading config file {self.config_file}: {e}")
+        
+        return configception as e:
                 logger.error(f"Error reading config file {self.config_file}: {e}")
         
         return config
@@ -107,6 +136,13 @@ class Config:
         """Get boolean configuration value"""
         value = self.get(key, section).lower()
         return value in ('true', 'yes', '1', 'on')
+    
+    def get_float(self, key: str, section: str = 'nowplaying') -> float:
+        """Get float configuration value"""
+        try:
+            return float(self.get(key, section))
+        except (ValueError, TypeError):
+            return float(self.DEFAULTS.get(key, 0.0))
     
     def merge_args(self, args) -> None:
         """Merge command-line arguments into config (args take precedence)"""
