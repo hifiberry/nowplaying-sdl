@@ -106,12 +106,6 @@ class Config:
             except Exception as e:
                 logger.error(f"Error reading config file {self.config_file}: {e}")
         
-        return configception as e:
-                logger.error(f"Error reading config file {self.config_file}: {e}")
-        
-        return configception as e:
-                logger.error(f"Error reading config file {self.config_file}: {e}")
-        
         return config
     
     def get(self, key: str, section: str = 'nowplaying') -> Any:
