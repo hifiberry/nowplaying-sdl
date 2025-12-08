@@ -1,3 +1,19 @@
+nowplaying-sdl (1.0.0-1) unstable; urgency=medium
+
+  * Major release 1.0.0
+  * Added screensaver functionality with backlight control
+  * Screensaver dims display after inactivity, turns off when playback stops
+  * Configurable brightness levels and timeouts
+  * Touch events reset screensaver timer
+  * Screensaver keeps display on during playback
+  * Increased button sizes for better touch usability (120-130px)
+  * Fixed button icon scaling to match button size
+  * Optimized button spacing for better layout
+  * Improved touch event handling and logging
+  * Fixed logging configuration to properly show INFO level logs
+
+ -- HiFiBerry <info@hifiberry.com>  Sun, 08 Dec 2024 12:00:00 +0000
+
 nowplaying-sdl (0.3.0-1) unstable; urgency=medium
 
   * Added circular layout mode for circular displays
